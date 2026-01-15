@@ -9,19 +9,19 @@ struct TimerView: View {
 
     var body: some View {
         VStack(spacing: 16) {
+            // Timer circle
             ZStack {
                 // Background circle
                 Circle()
                     .stroke(Color.gray.opacity(0.2), lineWidth: lineWidth)
                     .frame(width: circleSize, height: circleSize)
 
-                // Progress circle
+                // Progress circle - no animation to prevent jitter
                 Circle()
                     .trim(from: 0, to: viewModel.progress)
                     .stroke(strokeColor, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
                     .frame(width: circleSize, height: circleSize)
                     .rotationEffect(.degrees(-90))
-                    .animation(isDragging ? nil : .linear(duration: 0.5), value: viewModel.progress)
 
                 // Draggable handle (only when not idle)
                 if viewModel.timerState != .idle {
@@ -50,56 +50,66 @@ struct TimerView: View {
             .frame(width: circleSize + 20, height: circleSize + 20)
 
             // Control buttons
-            HStack(spacing: 8) {
-                if viewModel.timerState == .idle {
-                    Button(action: { viewModel.startWork() }) {
-                        Label("Start", systemImage: "play.fill")
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.green)
-                } else {
-                    Button(action: { viewModel.toggleTimer() }) {
-                        Label(viewModel.isRunning ? "Pause" : "Resume",
-                              systemImage: viewModel.isRunning ? "pause.fill" : "play.fill")
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(viewModel.isRunning ? .orange : .green)
+            controlButtons
 
-                    Button(action: { viewModel.completeEarly() }) {
-                        Label("Done", systemImage: "checkmark.circle.fill")
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.blue)
-
-                    Button(action: { viewModel.skip() }) {
-                        Label("Skip", systemImage: "forward.fill")
-                    }
-                    .buttonStyle(.bordered)
-
-                    Button(action: { viewModel.reset() }) {
-                        Image(systemName: "stop.fill")
-                    }
-                    .buttonStyle(.bordered)
-                    .tint(.red)
-                }
-            }
-
+            // Completed pomodoros indicator
             if viewModel.completedPomodoros > 0 {
-                HStack {
-                    ForEach(0..<min(viewModel.completedPomodoros, 4), id: \.self) { _ in
-                        Image(systemName: "circle.fill")
-                            .foregroundColor(.red)
-                            .font(.caption2)
-                    }
-                    if viewModel.completedPomodoros > 4 {
-                        Text("+\(viewModel.completedPomodoros - 4)")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                }
+                PomodoroDotsView(count: viewModel.completedPomodoros)
             }
         }
         .padding()
+    }
+
+    @ViewBuilder
+    private var controlButtons: some View {
+        if viewModel.timerState == .idle {
+            Button(action: { viewModel.startWork() }) {
+                Label("Start Focus", systemImage: "play.fill")
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.green)
+        } else {
+            HStack(spacing: 12) {
+                // Play/Pause - primary action
+                Button(action: { viewModel.toggleTimer() }) {
+                    Image(systemName: viewModel.isRunning ? "pause.fill" : "play.fill")
+                        .font(.system(size: 16))
+                        .frame(width: 36, height: 36)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(viewModel.isRunning ? .orange : .green)
+                .help(viewModel.isRunning ? "Pause" : "Resume")
+
+                // Done - complete early
+                Button(action: { viewModel.completeEarly() }) {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 16))
+                        .frame(width: 36, height: 36)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.blue)
+                .help("Done - Complete Early")
+
+                // Skip
+                Button(action: { viewModel.skip() }) {
+                    Image(systemName: "forward.fill")
+                        .font(.system(size: 14))
+                        .frame(width: 36, height: 36)
+                }
+                .buttonStyle(.bordered)
+                .help("Skip to Next")
+
+                // Reset
+                Button(action: { viewModel.reset() }) {
+                    Image(systemName: "stop.fill")
+                        .font(.system(size: 14))
+                        .frame(width: 36, height: 36)
+                }
+                .buttonStyle(.bordered)
+                .tint(.red)
+                .help("Reset")
+            }
+        }
     }
 
     private var strokeColor: Color {
@@ -111,6 +121,65 @@ struct TimerView: View {
         }
     }
 }
+
+// MARK: - Pomodoro Dots View
+
+struct PomodoroDotsView: View {
+    let count: Int
+
+    private let dotsPerRow = 4
+    private let maxRows = 4
+    private let maxDisplayed: Int
+
+    init(count: Int) {
+        self.count = count
+        self.maxDisplayed = dotsPerRow * maxRows // 16 dots max
+    }
+
+    var body: some View {
+        VStack(spacing: 4) {
+            let displayCount = min(count, maxDisplayed)
+            let fullRows = displayCount / dotsPerRow
+            let remainder = displayCount % dotsPerRow
+
+            // Full rows
+            ForEach(0..<fullRows, id: \.self) { _ in
+                dotRow(count: dotsPerRow)
+            }
+
+            // Partial row (if any)
+            if remainder > 0 || count > maxDisplayed {
+                HStack(spacing: 4) {
+                    ForEach(0..<remainder, id: \.self) { _ in
+                        dot
+                    }
+                    // Show overflow count after the last partial row
+                    if count > maxDisplayed {
+                        Text("+\(count - maxDisplayed)")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+        }
+    }
+
+    private func dotRow(count: Int) -> some View {
+        HStack(spacing: 4) {
+            ForEach(0..<count, id: \.self) { _ in
+                dot
+            }
+        }
+    }
+
+    private var dot: some View {
+        Circle()
+            .fill(Color.red)
+            .frame(width: 8, height: 8)
+    }
+}
+
+// MARK: - Draggable Handle
 
 struct DraggableHandle: View {
     let progress: Double
@@ -134,7 +203,7 @@ struct DraggableHandle: View {
             .fill(color)
             .frame(width: lineWidth + 8, height: lineWidth + 8)
             .shadow(color: color.opacity(0.5), radius: isDragging ? 4 : 2)
-            .scaleEffect(isDragging ? 1.3 : 1.0)
+            .scaleEffect(isDragging ? 1.2 : 1.0)
             .position(handlePosition)
             .gesture(
                 DragGesture(minimumDistance: 0)
@@ -158,11 +227,19 @@ struct DraggableHandle: View {
                         isDragging = false
                     }
             )
-            .animation(.easeOut(duration: 0.15), value: isDragging)
+            // Only animate the scale, not the position
+            .animation(.easeOut(duration: 0.1), value: isDragging)
     }
 }
 
 #Preview {
     TimerView(viewModel: PomodoroViewModel())
+        .frame(width: 280)
+}
+
+#Preview("With Many Pomodoros") {
+    let vm = PomodoroViewModel()
+    vm.completedPomodoros = 10
+    return TimerView(viewModel: vm)
         .frame(width: 280)
 }
