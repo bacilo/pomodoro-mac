@@ -198,4 +198,99 @@ final class PomodoroViewModelTests: XCTestCase {
         viewModel.startWork()
         XCTAssertFalse(viewModel.menuBarTitle.isEmpty)
     }
+
+    // MARK: - Complete Early Tests
+
+    func testCompleteEarlyFromWork() {
+        viewModel.startWork()
+        viewModel.timeRemaining = settings.workDurationSeconds / 2  // Halfway through
+
+        viewModel.completeEarly()
+
+        // Should transition to break and increment completed pomodoros
+        XCTAssertEqual(viewModel.completedPomodoros, 1)
+        XCTAssertEqual(viewModel.timerState, .shortBreak)
+        XCTAssertFalse(viewModel.isRunning)
+    }
+
+    func testCompleteEarlyFromBreak() {
+        viewModel.startShortBreak()
+        viewModel.timeRemaining = settings.shortBreakDurationSeconds / 2
+
+        let pomodorosBefore = viewModel.completedPomodoros
+        viewModel.completeEarly()
+
+        // Should transition to work, pomodoro count unchanged
+        XCTAssertEqual(viewModel.completedPomodoros, pomodorosBefore)
+        XCTAssertEqual(viewModel.timerState, .work)
+    }
+
+    func testCompleteEarlyFromIdleDoesNothing() {
+        viewModel.completeEarly()
+
+        XCTAssertEqual(viewModel.timerState, .idle)
+        XCTAssertEqual(viewModel.completedPomodoros, 0)
+    }
+
+    func testCompleteEarlyRecordsPartialDuration() {
+        viewModel.startWork()
+        // Simulate 10 minutes elapsed (600 seconds remaining of 1500)
+        viewModel.timeRemaining = settings.workDurationSeconds - 600
+
+        viewModel.completeEarly()
+
+        // Check that statistics recorded the partial duration
+        XCTAssertEqual(statistics.todayStats.completedPomodoros, 1)
+        XCTAssertEqual(statistics.todayStats.totalFocusMinutes, 10)
+    }
+
+    // MARK: - Set Progress Tests
+
+    func testSetProgressUpdatesTimeRemaining() {
+        viewModel.startWork()
+        viewModel.pause()
+
+        viewModel.setProgress(0.5)
+
+        let expectedTimeRemaining = settings.workDurationSeconds / 2
+        XCTAssertEqual(viewModel.timeRemaining, expectedTimeRemaining)
+    }
+
+    func testSetProgressToZero() {
+        viewModel.startWork()
+        viewModel.pause()
+
+        viewModel.setProgress(0)
+
+        XCTAssertEqual(viewModel.timeRemaining, settings.workDurationSeconds)
+    }
+
+    func testSetProgressToOne() {
+        viewModel.startWork()
+        viewModel.pause()
+
+        viewModel.setProgress(1.0)
+
+        XCTAssertEqual(viewModel.timeRemaining, 0)
+    }
+
+    func testSetProgressClampsValues() {
+        viewModel.startWork()
+        viewModel.pause()
+
+        viewModel.setProgress(1.5)  // Over 100%
+        XCTAssertEqual(viewModel.timeRemaining, 0)
+
+        viewModel.timeRemaining = settings.workDurationSeconds
+        viewModel.setProgress(-0.5)  // Negative
+        XCTAssertEqual(viewModel.timeRemaining, settings.workDurationSeconds)
+    }
+
+    func testSetProgressDoesNothingWhenIdle() {
+        let initialTime = viewModel.timeRemaining
+
+        viewModel.setProgress(0.5)
+
+        XCTAssertEqual(viewModel.timeRemaining, initialTime)
+    }
 }

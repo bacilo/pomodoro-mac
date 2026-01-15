@@ -98,6 +98,34 @@ class PomodoroViewModel: ObservableObject {
         transitionToNextState()
     }
 
+    func completeEarly() {
+        guard timerState != .idle else { return }
+        pause()
+
+        let completedState = timerState
+        if completedState == .work {
+            completedPomodoros += 1
+            // Record partial duration based on time elapsed
+            let totalDuration = settings.duration(for: timerState)
+            let elapsedSeconds = totalDuration - timeRemaining
+            let elapsedMinutes = max(1, elapsedSeconds / 60)
+            statistics.recordCompletedPomodoro(durationMinutes: elapsedMinutes)
+        }
+
+        recordCompletedSession()
+        sendNotification(for: completedState)
+        playCompletionSound()
+
+        transitionToNextState()
+    }
+
+    func setProgress(_ newProgress: Double) {
+        guard timerState != .idle else { return }
+        let totalDuration = settings.duration(for: timerState)
+        let clampedProgress = max(0, min(1, newProgress))
+        timeRemaining = Int(Double(totalDuration) * (1 - clampedProgress))
+    }
+
     private func startTimer() {
         isRunning = true
         timer?.invalidate()
@@ -135,7 +163,7 @@ class PomodoroViewModel: ObservableObject {
     private func transitionToNextState() {
         switch timerState {
         case .work:
-            if completedPomodoros % settings.pomodorosBeforeLongBreak == 0 {
+            if completedPomodoros > 0 && completedPomodoros % settings.pomodorosBeforeLongBreak == 0 {
                 timerState = .longBreak
                 timeRemaining = settings.longBreakDurationSeconds
             } else {
