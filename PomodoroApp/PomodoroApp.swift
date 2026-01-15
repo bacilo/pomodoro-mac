@@ -29,6 +29,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     var popover: NSPopover!
     var viewModel: PomodoroViewModel!
     var cancellables = Set<AnyCancellable>()
+    var blinkTimer: Timer?
+    var isBlinkOn: Bool = true
 
     private var isRunningTests: Bool {
         NSClassFromString("XCTestCase") != nil
@@ -47,7 +49,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
         // Create the popover
         popover = NSPopover()
-        popover.contentSize = NSSize(width: 280, height: 380)
+        popover.contentSize = NSSize(width: 280, height: 420)
         popover.behavior = .transient
         popover.delegate = self
         popover.contentViewController = NSHostingController(rootView: MenuBarView(viewModel: viewModel))
@@ -91,17 +93,57 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     }
 
     private func updateStatusButton() {
+        guard statusItem.button != nil else { return }
+
+        let isVeryUrgent = viewModel.timerState == .work && viewModel.timeRemaining <= 15 // Last 15 seconds
+
+        // Manage blink timer for very urgent state
+        if isVeryUrgent && blinkTimer == nil {
+            blinkTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
+                Task { @MainActor in
+                    self?.isBlinkOn.toggle()
+                    self?.updateStatusButtonAppearance()
+                }
+            }
+        } else if !isVeryUrgent && blinkTimer != nil {
+            blinkTimer?.invalidate()
+            blinkTimer = nil
+            isBlinkOn = true
+        }
+
+        updateStatusButtonAppearance()
+    }
+
+    private func updateStatusButtonAppearance() {
         guard let button = statusItem.button else { return }
 
         let icon = viewModel.timerState.menuBarIcon
         let title = viewModel.menuBarTitle
+        let isUrgent = viewModel.timerState == .work && viewModel.timeRemaining <= 120
+        let isVeryUrgent = viewModel.timerState == .work && viewModel.timeRemaining <= 15
 
         if title.isEmpty {
             button.image = NSImage(systemSymbolName: icon, accessibilityDescription: "Pomodoro")
-            button.title = ""
+            button.attributedTitle = NSAttributedString(string: "")
         } else {
             button.image = NSImage(systemSymbolName: icon, accessibilityDescription: "Pomodoro")
-            button.title = " \(title)"
+
+            // Use monospace font for consistent width
+            let font = NSFont.monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
+
+            // Determine color based on urgency
+            var textColor: NSColor = .labelColor
+            if isVeryUrgent {
+                textColor = isBlinkOn ? .systemRed : .labelColor
+            } else if isUrgent {
+                textColor = .systemRed
+            }
+
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: font,
+                .foregroundColor: textColor
+            ]
+            button.attributedTitle = NSAttributedString(string: " \(title)", attributes: attributes)
             button.imagePosition = .imageLeading
         }
     }

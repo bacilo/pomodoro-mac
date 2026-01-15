@@ -60,55 +60,49 @@ struct TimerView: View {
         .padding()
     }
 
-    @ViewBuilder
     private var controlButtons: some View {
-        if viewModel.timerState == .idle {
-            Button(action: { viewModel.startWork() }) {
-                Label("Start Focus", systemImage: "play.fill")
+        HStack(spacing: 12) {
+            // Play/Pause - primary action
+            Button(action: { viewModel.toggleTimer() }) {
+                Image(systemName: viewModel.isRunning ? "pause.fill" : "play.fill")
+                    .font(.system(size: 16))
+                    .frame(width: 36, height: 36)
             }
             .buttonStyle(.borderedProminent)
-            .tint(.green)
-        } else {
-            HStack(spacing: 12) {
-                // Play/Pause - primary action
-                Button(action: { viewModel.toggleTimer() }) {
-                    Image(systemName: viewModel.isRunning ? "pause.fill" : "play.fill")
-                        .font(.system(size: 16))
-                        .frame(width: 36, height: 36)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(viewModel.isRunning ? .orange : .green)
-                .help(viewModel.isRunning ? "Pause" : "Resume")
+            .tint(viewModel.isRunning ? .orange : .green)
+            .help(viewModel.timerState == .idle ? "Start Focus" : (viewModel.isRunning ? "Pause" : "Resume"))
 
-                // Done - complete early
-                Button(action: { viewModel.completeEarly() }) {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 16))
-                        .frame(width: 36, height: 36)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(.blue)
-                .help("Done - Complete Early")
-
-                // Skip
-                Button(action: { viewModel.skip() }) {
-                    Image(systemName: "forward.fill")
-                        .font(.system(size: 14))
-                        .frame(width: 36, height: 36)
-                }
-                .buttonStyle(.bordered)
-                .help("Skip to Next")
-
-                // Reset
-                Button(action: { viewModel.reset() }) {
-                    Image(systemName: "stop.fill")
-                        .font(.system(size: 14))
-                        .frame(width: 36, height: 36)
-                }
-                .buttonStyle(.bordered)
-                .tint(.red)
-                .help("Reset")
+            // Done - complete early
+            Button(action: { viewModel.completeEarly() }) {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 16))
+                    .frame(width: 36, height: 36)
             }
+            .buttonStyle(.borderedProminent)
+            .tint(.blue)
+            .help("Done - Complete Early")
+            .disabled(viewModel.timerState == .idle)
+
+            // Skip
+            Button(action: { viewModel.skip() }) {
+                Image(systemName: "forward.fill")
+                    .font(.system(size: 14))
+                    .frame(width: 36, height: 36)
+            }
+            .buttonStyle(.bordered)
+            .help("Skip to Next")
+            .disabled(viewModel.timerState == .idle)
+
+            // Reset
+            Button(action: { viewModel.reset() }) {
+                Image(systemName: "stop.fill")
+                    .font(.system(size: 14))
+                    .frame(width: 36, height: 36)
+            }
+            .buttonStyle(.bordered)
+            .tint(.red)
+            .help("Reset")
+            .disabled(viewModel.timerState == .idle)
         }
     }
 

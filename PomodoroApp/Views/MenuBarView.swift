@@ -24,17 +24,19 @@ struct MenuBarView: View {
 
             Divider()
 
-            Group {
-                switch selectedTab {
-                case .timer:
-                    TimerView(viewModel: viewModel)
-                case .stats:
-                    StatsView(statistics: viewModel.statistics)
-                case .settings:
-                    SettingsView(settings: viewModel.settings)
+            ScrollView {
+                Group {
+                    switch selectedTab {
+                    case .timer:
+                        TimerView(viewModel: viewModel)
+                    case .stats:
+                        StatsView(statistics: viewModel.statistics)
+                    case .settings:
+                        SettingsView(settings: viewModel.settings)
+                    }
                 }
             }
-            .frame(minHeight: 200)
+            .frame(height: 340)
 
             Divider()
 

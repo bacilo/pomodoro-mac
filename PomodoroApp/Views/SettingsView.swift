@@ -54,7 +54,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 280)
+        .scrollDisabled(true)
     }
 }
 

@@ -44,7 +44,6 @@ struct StatsView: View {
             }
         }
         .padding()
-        .frame(width: 280)
     }
 
     private var maxInWeek: Int {
