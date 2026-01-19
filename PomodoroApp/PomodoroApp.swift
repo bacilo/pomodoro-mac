@@ -36,7 +36,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     var marqueeTimer: Timer?
     var marqueeOffset: Int = 0
     var lastSlotName: String = ""
-    let marqueeMaxChars = 12  // Max visible characters for slot name
+    let marqueeMaxChars = 10  // Max visible characters for slot name
     let marqueePadding = "   "  // Padding between repeated text
 
     private var isRunningTests: Bool {
@@ -164,8 +164,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         } else {
             button.image = NSImage(systemSymbolName: icon, accessibilityDescription: "Pomodoro")
 
-            // Use monospace font for consistent width
-            let font = NSFont.monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
+            // Use fully monospaced font for consistent width (prevents timer jitter)
+            let monoFont = NSFont.monospacedSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
 
             // Determine color based on urgency
             var textColor: NSColor = .labelColor
@@ -178,10 +178,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             // Build the title string - use attributed string for different fonts
             let result = NSMutableAttributedString()
 
-            // Timer portion with monospaced digits
+            // Timer portion with fully monospaced font
             let timerText = " \(title)"
             let timerAttributes: [NSAttributedString.Key: Any] = [
-                .font: font,
+                .font: monoFont,
                 .foregroundColor: textColor
             ]
             result.append(NSAttributedString(string: timerText, attributes: timerAttributes))
@@ -215,8 +215,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
                     visibleSlotName += " "
                 }
 
-                // Use fully monospaced font for slot name to prevent jitter
-                let monoFont = NSFont.monospacedSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
+                // Slot name uses same monospaced font
                 let slotAttributes: [NSAttributedString.Key: Any] = [
                     .font: monoFont,
                     .foregroundColor: textColor
