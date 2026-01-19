@@ -8,19 +8,30 @@ class PomodoroViewModel: ObservableObject {
     @Published var timerState: TimerState = .idle
     @Published var timeRemaining: Int = 0
     @Published var isRunning: Bool = false
-    @Published var completedPomodoros: Int = 0
+
+    // Computed from slotManager - single source of truth
+    var completedPomodoros: Int { slotManager.today.completedCount }
+    var currentSlotName: String? { slotManager.currentSlotName }
 
     let settings: Settings
     let statistics: Statistics
+    let slotManager: SlotManager
 
     private var timer: Timer?
     private var sessionStartTime: Date?
+    private var slotManagerCancellable: AnyCancellable?
 
-    init(settings: Settings = Settings(), statistics: Statistics = Statistics()) {
+    init(settings: Settings = Settings(), statistics: Statistics = Statistics(), slotManager: SlotManager = SlotManager()) {
         self.settings = settings
         self.statistics = statistics
+        self.slotManager = slotManager
         self.timeRemaining = settings.workDurationSeconds
         requestNotificationPermission()
+
+        // Forward slotManager changes to update completedPomodoros observers
+        slotManagerCancellable = slotManager.objectWillChange.sink { [weak self] _ in
+            self?.objectWillChange.send()
+        }
     }
 
     var progress: Double {
@@ -91,6 +102,7 @@ class PomodoroViewModel: ObservableObject {
         timerState = .idle
         timeRemaining = settings.workDurationSeconds
         sessionStartTime = nil
+        slotManager.resetCompletions()  // Reset slot completions too
     }
 
     func skip() {
@@ -104,12 +116,12 @@ class PomodoroViewModel: ObservableObject {
 
         let completedState = timerState
         if completedState == .work {
-            completedPomodoros += 1
             // Record partial duration based on time elapsed
             let totalDuration = settings.duration(for: timerState)
             let elapsedSeconds = totalDuration - timeRemaining
             let elapsedMinutes = max(1, elapsedSeconds / 60)
             statistics.recordCompletedPomodoro(durationMinutes: elapsedMinutes)
+            slotManager.advanceCompletion()  // This increments completedPomodoros
         }
 
         recordCompletedSession()
@@ -149,8 +161,8 @@ class PomodoroViewModel: ObservableObject {
 
         let completedState = timerState
         if completedState == .work {
-            completedPomodoros += 1
             statistics.recordCompletedPomodoro(durationMinutes: settings.workDuration)
+            slotManager.advanceCompletion()  // This increments completedPomodoros
         }
 
         recordCompletedSession()

@@ -17,10 +17,18 @@
 		B10000010000000000000008 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000020000000000000008 /* SettingsView.swift */; };
 		B10000010000000000000009 /* StatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000020000000000000009 /* StatsView.swift */; };
 		B10000010000000000000010 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B10000020000000000000010 /* Assets.xcassets */; };
+		B10000010000000000000011 /* Slot.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000020000000000000013 /* Slot.swift */; };
+		B10000010000000000000012 /* DailySlots.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000020000000000000014 /* DailySlots.swift */; };
+		B10000010000000000000013 /* SlotManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000020000000000000015 /* SlotManager.swift */; };
+		B10000010000000000000014 /* SlotsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000020000000000000016 /* SlotsView.swift */; };
+		B10000010000000000000015 /* SlotRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000020000000000000017 /* SlotRowView.swift */; };
+		B10000010000000000000016 /* SlotTemplatesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000020000000000000018 /* SlotTemplatesView.swift */; };
+		B10000010000000000000017 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000020000000000000019 /* HistoryView.swift */; };
 		C10000010000000000000001 /* TimerStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000020000000000000001 /* TimerStateTests.swift */; };
 		C10000010000000000000002 /* SettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000020000000000000002 /* SettingsTests.swift */; };
 		C10000010000000000000003 /* StatisticsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000020000000000000003 /* StatisticsTests.swift */; };
 		C10000010000000000000004 /* PomodoroViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000020000000000000004 /* PomodoroViewModelTests.swift */; };
+		C10000010000000000000005 /* SlotManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000020000000000000005 /* SlotManagerTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -46,11 +54,19 @@
 		B10000020000000000000010 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B10000020000000000000011 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B10000020000000000000012 /* PomodoroApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PomodoroApp.entitlements; sourceTree = "<group>"; };
+		B10000020000000000000013 /* Slot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Slot.swift; sourceTree = "<group>"; };
+		B10000020000000000000014 /* DailySlots.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailySlots.swift; sourceTree = "<group>"; };
+		B10000020000000000000015 /* SlotManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlotManager.swift; sourceTree = "<group>"; };
+		B10000020000000000000016 /* SlotsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlotsView.swift; sourceTree = "<group>"; };
+		B10000020000000000000017 /* SlotRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlotRowView.swift; sourceTree = "<group>"; };
+		B10000020000000000000018 /* SlotTemplatesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlotTemplatesView.swift; sourceTree = "<group>"; };
+		B10000020000000000000019 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
 		B10000030000000000000001 /* PomodoroApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PomodoroApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C10000020000000000000001 /* TimerStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerStateTests.swift; sourceTree = "<group>"; };
 		C10000020000000000000002 /* SettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsTests.swift; sourceTree = "<group>"; };
 		C10000020000000000000003 /* StatisticsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatisticsTests.swift; sourceTree = "<group>"; };
 		C10000020000000000000004 /* PomodoroViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PomodoroViewModelTests.swift; sourceTree = "<group>"; };
+		C10000020000000000000005 /* SlotManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlotManagerTests.swift; sourceTree = "<group>"; };
 		C10000030000000000000002 /* PomodoroAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PomodoroAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -101,6 +117,9 @@
 				B10000020000000000000002 /* TimerState.swift */,
 				B10000020000000000000003 /* Settings.swift */,
 				B10000020000000000000004 /* Statistics.swift */,
+				B10000020000000000000013 /* Slot.swift */,
+				B10000020000000000000014 /* DailySlots.swift */,
+				B10000020000000000000015 /* SlotManager.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -120,6 +139,10 @@
 				B10000020000000000000007 /* TimerView.swift */,
 				B10000020000000000000008 /* SettingsView.swift */,
 				B10000020000000000000009 /* StatsView.swift */,
+				B10000020000000000000016 /* SlotsView.swift */,
+				B10000020000000000000017 /* SlotRowView.swift */,
+				B10000020000000000000018 /* SlotTemplatesView.swift */,
+				B10000020000000000000019 /* HistoryView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -148,6 +171,7 @@
 				C10000020000000000000002 /* SettingsTests.swift */,
 				C10000020000000000000003 /* StatisticsTests.swift */,
 				C10000020000000000000004 /* PomodoroViewModelTests.swift */,
+				C10000020000000000000005 /* SlotManagerTests.swift */,
 			);
 			path = PomodoroAppTests;
 			sourceTree = "<group>";
@@ -247,11 +271,18 @@
 				B10000010000000000000002 /* TimerState.swift in Sources */,
 				B10000010000000000000003 /* Settings.swift in Sources */,
 				B10000010000000000000004 /* Statistics.swift in Sources */,
+				B10000010000000000000011 /* Slot.swift in Sources */,
+				B10000010000000000000012 /* DailySlots.swift in Sources */,
+				B10000010000000000000013 /* SlotManager.swift in Sources */,
 				B10000010000000000000005 /* PomodoroViewModel.swift in Sources */,
 				B10000010000000000000006 /* MenuBarView.swift in Sources */,
 				B10000010000000000000007 /* TimerView.swift in Sources */,
 				B10000010000000000000008 /* SettingsView.swift in Sources */,
 				B10000010000000000000009 /* StatsView.swift in Sources */,
+				B10000010000000000000014 /* SlotsView.swift in Sources */,
+				B10000010000000000000015 /* SlotRowView.swift in Sources */,
+				B10000010000000000000016 /* SlotTemplatesView.swift in Sources */,
+				B10000010000000000000017 /* HistoryView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -263,6 +294,7 @@
 				C10000010000000000000002 /* SettingsTests.swift in Sources */,
 				C10000010000000000000003 /* StatisticsTests.swift in Sources */,
 				C10000010000000000000004 /* PomodoroViewModelTests.swift in Sources */,
+				C10000010000000000000005 /* SlotManagerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

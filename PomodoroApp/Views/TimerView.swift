@@ -8,7 +8,7 @@ struct TimerView: View {
     private let lineWidth: CGFloat = 8
 
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 12) {
             // Timer circle
             ZStack {
                 // Background circle
@@ -38,7 +38,7 @@ struct TimerView: View {
                 }
 
                 // Center content
-                VStack(spacing: 4) {
+                VStack(spacing: 2) {
                     Text(viewModel.timeRemainingFormatted)
                         .font(.system(size: 28, weight: .medium, design: .monospaced))
 
@@ -48,6 +48,16 @@ struct TimerView: View {
                 }
             }
             .frame(width: circleSize + 20, height: circleSize + 20)
+
+            // Current slot name (prominently displayed below circle)
+            if let slotName = viewModel.currentSlotName {
+                Text(slotName)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.primary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: circleSize + 40)
+            }
 
             // Control buttons
             controlButtons
@@ -233,7 +243,10 @@ struct DraggableHandle: View {
 
 #Preview("With Many Pomodoros") {
     let vm = PomodoroViewModel()
-    vm.completedPomodoros = 10
+    // Simulate 10 completed pomodoros
+    for _ in 0..<10 {
+        vm.slotManager.advanceCompletion()
+    }
     return TimerView(viewModel: vm)
         .frame(width: 280)
 }

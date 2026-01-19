@@ -6,6 +6,7 @@ struct MenuBarView: View {
 
     enum Tab {
         case timer
+        case slots
         case stats
         case settings
     }
@@ -14,6 +15,7 @@ struct MenuBarView: View {
         VStack(spacing: 0) {
             Picker("", selection: $selectedTab) {
                 Image(systemName: "timer").tag(Tab.timer)
+                Image(systemName: "list.bullet.rectangle").tag(Tab.slots)
                 Image(systemName: "chart.bar").tag(Tab.stats)
                 Image(systemName: "gearshape").tag(Tab.settings)
             }
@@ -29,8 +31,10 @@ struct MenuBarView: View {
                     switch selectedTab {
                     case .timer:
                         TimerView(viewModel: viewModel)
+                    case .slots:
+                        SlotsView(slotManager: viewModel.slotManager)
                     case .stats:
-                        StatsView(statistics: viewModel.statistics)
+                        StatsView(statistics: viewModel.statistics, slotManager: viewModel.slotManager)
                     case .settings:
                         SettingsView(settings: viewModel.settings)
                     }

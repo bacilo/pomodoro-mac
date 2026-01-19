@@ -2,11 +2,24 @@ import SwiftUI
 
 struct StatsView: View {
     @ObservedObject var statistics: Statistics
+    @ObservedObject var slotManager: SlotManager
+    @State private var showingHistory = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Statistics")
-                .font(.headline)
+            HStack {
+                Text("Statistics")
+                    .font(.headline)
+
+                Spacer()
+
+                Button(action: { showingHistory = true }) {
+                    Image(systemName: "clock.arrow.circlepath")
+                        .font(.system(size: 12))
+                }
+                .buttonStyle(.plain)
+                .help("View slot history")
+            }
 
             HStack(spacing: 20) {
                 StatBox(title: "Today", value: statistics.todayStats.completedPomodoros)
@@ -44,6 +57,9 @@ struct StatsView: View {
             }
         }
         .padding()
+        .sheet(isPresented: $showingHistory) {
+            HistoryView(slotManager: slotManager)
+        }
     }
 
     private var maxInWeek: Int {
@@ -97,5 +113,5 @@ struct BarView: View {
 }
 
 #Preview {
-    StatsView(statistics: Statistics())
+    StatsView(statistics: Statistics(), slotManager: SlotManager())
 }

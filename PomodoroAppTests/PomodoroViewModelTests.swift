@@ -6,12 +6,17 @@ final class PomodoroViewModelTests: XCTestCase {
     var viewModel: PomodoroViewModel!
     var settings: Settings!
     var statistics: Statistics!
+    var slotManager: SlotManager!
 
     override func setUp() async throws {
         try await super.setUp()
         // Clear UserDefaults for clean tests
         UserDefaults.standard.removeObject(forKey: "pomodoroStatistics")
         UserDefaults.standard.removeObject(forKey: "pomodoroSessions")
+        UserDefaults.standard.removeObject(forKey: "pomodoroSlots")
+        UserDefaults.standard.removeObject(forKey: "pomodoroSlotsHistory")
+        UserDefaults.standard.removeObject(forKey: "defaultSlotCount")
+        UserDefaults.standard.removeObject(forKey: "defaultSlotNames")
 
         settings = Settings()
         settings.workDuration = 25
@@ -22,15 +27,21 @@ final class PomodoroViewModelTests: XCTestCase {
         settings.autoStartWork = false
 
         statistics = Statistics()
-        viewModel = PomodoroViewModel(settings: settings, statistics: statistics)
+        slotManager = SlotManager()
+        viewModel = PomodoroViewModel(settings: settings, statistics: statistics, slotManager: slotManager)
     }
 
     override func tearDown() async throws {
         viewModel = nil
         settings = nil
         statistics = nil
+        slotManager = nil
         UserDefaults.standard.removeObject(forKey: "pomodoroStatistics")
         UserDefaults.standard.removeObject(forKey: "pomodoroSessions")
+        UserDefaults.standard.removeObject(forKey: "pomodoroSlots")
+        UserDefaults.standard.removeObject(forKey: "pomodoroSlotsHistory")
+        UserDefaults.standard.removeObject(forKey: "defaultSlotCount")
+        UserDefaults.standard.removeObject(forKey: "defaultSlotNames")
         try await super.tearDown()
     }
 
@@ -132,6 +143,37 @@ final class PomodoroViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.timeRemaining, settings.workDurationSeconds)
     }
 
+    func testReset_ResetsSlotCompletions() {
+        // Complete some pomodoros
+        viewModel.startWork()
+        viewModel.completeEarly()
+        viewModel.startWork()
+        viewModel.completeEarly()
+        XCTAssertEqual(viewModel.completedPomodoros, 2)
+        XCTAssertEqual(slotManager.today.completedCount, 2)
+
+        // Reset should clear both
+        viewModel.startWork()
+        viewModel.reset()
+
+        XCTAssertEqual(viewModel.completedPomodoros, 0)
+        XCTAssertEqual(slotManager.today.completedCount, 0)
+    }
+
+    func testCompletedPomodoros_SyncsWithSlotManager() {
+        // Verify that completedPomodoros is derived from slotManager
+        XCTAssertEqual(viewModel.completedPomodoros, 0)
+
+        slotManager.advanceCompletion()
+        XCTAssertEqual(viewModel.completedPomodoros, 1)
+
+        slotManager.advanceCompletion()
+        XCTAssertEqual(viewModel.completedPomodoros, 2)
+
+        slotManager.resetCompletions()
+        XCTAssertEqual(viewModel.completedPomodoros, 0)
+    }
+
     // MARK: - Skip Tests
 
     func testSkipFromWork() {
@@ -149,8 +191,10 @@ final class PomodoroViewModelTests: XCTestCase {
     }
 
     func testSkipToLongBreakAfterEnoughPomodoros() {
-        // Simulate completing enough pomodoros
-        viewModel.completedPomodoros = settings.pomodorosBeforeLongBreak
+        // Complete enough pomodoros to trigger long break
+        for _ in 0..<settings.pomodorosBeforeLongBreak {
+            slotManager.advanceCompletion()
+        }
         viewModel.startWork()
         viewModel.skip()
 
@@ -292,5 +336,48 @@ final class PomodoroViewModelTests: XCTestCase {
         viewModel.setProgress(0.5)
 
         XCTAssertEqual(viewModel.timeRemaining, initialTime)
+    }
+
+    // MARK: - Slot Integration Tests
+
+    func testCompleteEarly_AdvancesSlot() {
+        XCTAssertEqual(slotManager.today.completedCount, 0)
+
+        viewModel.startWork()
+        viewModel.completeEarly()
+
+        XCTAssertEqual(slotManager.today.completedCount, 1)
+    }
+
+    func testBreakCompletion_DoesNotAdvanceSlot() {
+        XCTAssertEqual(slotManager.today.completedCount, 0)
+
+        viewModel.startShortBreak()
+        viewModel.completeEarly()
+
+        XCTAssertEqual(slotManager.today.completedCount, 0)
+    }
+
+    func testMultipleWorkCompletions_AdvanceMultipleSlots() {
+        viewModel.startWork()
+        viewModel.completeEarly()
+        XCTAssertEqual(slotManager.today.completedCount, 1)
+
+        viewModel.startWork()
+        viewModel.completeEarly()
+        XCTAssertEqual(slotManager.today.completedCount, 2)
+
+        viewModel.startWork()
+        viewModel.completeEarly()
+        XCTAssertEqual(slotManager.today.completedCount, 3)
+    }
+
+    func testSkipFromWork_DoesNotAdvanceSlot() {
+        XCTAssertEqual(slotManager.today.completedCount, 0)
+
+        viewModel.startWork()
+        viewModel.skip()
+
+        XCTAssertEqual(slotManager.today.completedCount, 0)
     }
 }
