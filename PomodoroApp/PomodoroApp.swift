@@ -158,14 +158,31 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         let isUrgent = viewModel.timerState == .work && viewModel.timeRemaining <= 120
         let isVeryUrgent = viewModel.timerState == .work && viewModel.timeRemaining <= 15
 
+        // Use fully monospaced font for consistent width
+        let monoFont = NSFont.monospacedSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
+
+        // Determine if we're showing slot name
+        let showingSlotName = viewModel.settings.showSlotNameInMenuBar &&
+                              viewModel.timerState == .work &&
+                              viewModel.currentSlotName != nil
+
+        // Set fixed width when showing slot name to prevent jitter
+        if showingSlotName {
+            // Calculate fixed width: icon + space + timer (6 chars) + " · " + slot name (marqueeMaxChars)
+            // Using monospaced font, we can calculate exact width
+            let sampleText = " 00:00 · " + String(repeating: "M", count: marqueeMaxChars)
+            let textWidth = (sampleText as NSString).size(withAttributes: [.font: monoFont]).width
+            let iconWidth: CGFloat = 20  // Approximate icon width
+            statusItem.length = iconWidth + textWidth + 8  // Add padding
+        } else {
+            statusItem.length = NSStatusItem.variableLength
+        }
+
         if title.isEmpty {
             button.image = NSImage(systemSymbolName: icon, accessibilityDescription: "Pomodoro")
             button.attributedTitle = NSAttributedString(string: "")
         } else {
             button.image = NSImage(systemSymbolName: icon, accessibilityDescription: "Pomodoro")
-
-            // Use fully monospaced font for consistent width (prevents timer jitter)
-            let monoFont = NSFont.monospacedSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
 
             // Determine color based on urgency
             var textColor: NSColor = .labelColor
@@ -187,8 +204,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             result.append(NSAttributedString(string: timerText, attributes: timerAttributes))
 
             // Add slot name if enabled and in work mode
-            if viewModel.settings.showSlotNameInMenuBar &&
-               viewModel.timerState == .work,
+            if showingSlotName,
                let slotName = viewModel.currentSlotName {
 
                 var visibleSlotName: String
