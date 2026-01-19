@@ -14,25 +14,22 @@ rm -rf "$BUILD_DIR"
 rm -rf "$EXPORT_DIR"
 mkdir -p "$EXPORT_DIR"
 
-# Build the app
-xcodebuild build \
-  -project "$PROJECT_DIR/PomodoroApp.xcodeproj" \
+# Build the app (use xcpretty if available for cleaner output)
+BUILD_CMD="xcodebuild build \
+  -project \"$PROJECT_DIR/PomodoroApp.xcodeproj\" \
   -scheme PomodoroApp \
   -configuration Release \
-  -derivedDataPath "$BUILD_DIR" \
+  -derivedDataPath \"$BUILD_DIR\" \
   -destination 'platform=macOS' \
-  CODE_SIGN_IDENTITY="-" \
+  CODE_SIGN_IDENTITY=\"-\" \
   CODE_SIGNING_REQUIRED=NO \
-  CODE_SIGNING_ALLOWED=NO \
-  2>&1 | xcpretty || xcodebuild build \
-  -project "$PROJECT_DIR/PomodoroApp.xcodeproj" \
-  -scheme PomodoroApp \
-  -configuration Release \
-  -derivedDataPath "$BUILD_DIR" \
-  -destination 'platform=macOS' \
-  CODE_SIGN_IDENTITY="-" \
-  CODE_SIGNING_REQUIRED=NO \
-  CODE_SIGNING_ALLOWED=NO
+  CODE_SIGNING_ALLOWED=NO"
+
+if command -v xcpretty &> /dev/null; then
+  eval "$BUILD_CMD" 2>&1 | xcpretty
+else
+  eval "$BUILD_CMD"
+fi
 
 # Find and copy the built app
 APP_PATH=$(find "$BUILD_DIR" -name "PomodoroApp.app" -type d | head -1)
