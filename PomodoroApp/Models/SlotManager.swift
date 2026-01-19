@@ -267,8 +267,17 @@ class SlotManager: ObservableObject {
         save()
     }
 
-    func clearAllHistory() {
+    func clearAllHistory(includingToday: Bool = false) {
         history = []
+        if includingToday {
+            // Reset today to fresh state from template
+            var slots: [Slot] = []
+            for i in 0..<defaultSlotCount {
+                let name = i < defaultSlotNames.count ? defaultSlotNames[i] : "Slot \(i + 1)"
+                slots.append(Slot(name: name))
+            }
+            today = DailySlots(date: Date(), slots: slots, completedCount: 0)
+        }
         save()
     }
 

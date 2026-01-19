@@ -73,10 +73,10 @@ struct StatsView: View {
             Button("Cancel", role: .cancel) { }
             Button("Clear All", role: .destructive) {
                 statistics.clearAll()
-                slotManager.clearAllHistory()
+                slotManager.clearAllHistory(includingToday: true)
             }
         } message: {
-            Text("This will permanently delete all statistics and slot history. Today's slots will not be affected.")
+            Text("This will permanently delete all statistics and slot history, including today's progress.")
         }
     }
 

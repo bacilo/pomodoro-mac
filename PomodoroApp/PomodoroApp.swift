@@ -175,8 +175,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
                 textColor = .systemRed
             }
 
-            // Build the title string
-            var displayText = " \(title)"
+            // Build the title string - use attributed string for different fonts
+            let result = NSMutableAttributedString()
+
+            // Timer portion with monospaced digits
+            let timerText = " \(title)"
+            let timerAttributes: [NSAttributedString.Key: Any] = [
+                .font: font,
+                .foregroundColor: textColor
+            ]
+            result.append(NSAttributedString(string: timerText, attributes: timerAttributes))
 
             // Add slot name if enabled and in work mode
             if viewModel.settings.showSlotNameInMenuBar &&
@@ -206,14 +214,18 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
                 while visibleSlotName.count < marqueeMaxChars {
                     visibleSlotName += " "
                 }
-                displayText += " · \(visibleSlotName)"
+
+                // Use fully monospaced font for slot name to prevent jitter
+                let monoFont = NSFont.monospacedSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
+                let slotAttributes: [NSAttributedString.Key: Any] = [
+                    .font: monoFont,
+                    .foregroundColor: textColor
+                ]
+                result.append(NSAttributedString(string: " · ", attributes: timerAttributes))
+                result.append(NSAttributedString(string: visibleSlotName, attributes: slotAttributes))
             }
 
-            let attributes: [NSAttributedString.Key: Any] = [
-                .font: font,
-                .foregroundColor: textColor
-            ]
-            button.attributedTitle = NSAttributedString(string: displayText, attributes: attributes)
+            button.attributedTitle = result
             button.imagePosition = .imageLeading
         }
     }
