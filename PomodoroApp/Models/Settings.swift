@@ -10,6 +10,7 @@ class Settings: ObservableObject {
     @AppStorage("autoStartWork") var autoStartWork: Bool = false
     @AppStorage("playSound") var playSound: Bool = true
     @AppStorage("showNotifications") var showNotifications: Bool = true
+    @AppStorage("showSlotNameInMenuBar") var showSlotNameInMenuBar: Bool = false
 
     var workDurationSeconds: Int { workDuration * 60 }
     var shortBreakDurationSeconds: Int { shortBreakDuration * 60 }

@@ -2,14 +2,16 @@ import SwiftUI
 
 struct HistoryView: View {
     @ObservedObject var slotManager: SlotManager
+    @ObservedObject var statistics: Statistics
     @Environment(\.dismiss) private var dismiss
     @State private var expandedDayIndex: Int?
+    @State private var todayExpanded = false
 
     var body: some View {
         VStack(spacing: 12) {
             // Header
             HStack {
-                Text("Slot History")
+                Text("Completed Slots")
                     .font(.headline)
 
                 Spacer()
@@ -18,34 +20,52 @@ struct HistoryView: View {
                     .buttonStyle(.plain)
             }
 
-            if slotManager.history.isEmpty {
-                Spacer()
-                Text("No history yet")
-                    .foregroundColor(.secondary)
-                Spacer()
-            } else {
-                ScrollView {
-                    LazyVStack(spacing: 8) {
-                        // Show history in reverse order (most recent first)
-                        ForEach(Array(slotManager.history.enumerated().reversed()), id: \.offset) { index, day in
-                            HistoryDayRow(
-                                day: day,
+            ScrollView {
+                LazyVStack(spacing: 8) {
+                    // Today's completed slots (special handling - syncs with slot list)
+                    if slotManager.today.completedCount > 0 {
+                        TodayHistoryRow(
+                            slotManager: slotManager,
+                            statistics: statistics,
+                            isExpanded: todayExpanded,
+                            onToggleExpand: {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    todayExpanded.toggle()
+                                }
+                            }
+                        )
+                    }
+
+                    // Past days (most recent first)
+                    ForEach(Array(slotManager.history.enumerated().reversed()), id: \.element.id) { index, day in
+                        // Skip today if it's in history (we show it separately above)
+                        if day.dateString != DailySlots.todayDateString() {
+                            PastDayHistoryRow(
                                 dayIndex: index,
                                 isExpanded: expandedDayIndex == index,
                                 slotManager: slotManager,
+                                statistics: statistics,
                                 onToggleExpand: {
                                     withAnimation(.easeInOut(duration: 0.2)) {
                                         expandedDayIndex = expandedDayIndex == index ? nil : index
                                     }
                                 },
                                 onDelete: {
+                                    let dateString = slotManager.history[index].dateString
                                     slotManager.deleteHistoryDay(dayIndex: index)
+                                    statistics.removeDay(dateString: dateString)
                                     if expandedDayIndex == index {
                                         expandedDayIndex = nil
                                     }
                                 }
                             )
                         }
+                    }
+
+                    if slotManager.today.completedCount == 0 && slotManager.history.isEmpty {
+                        Text("No completed slots yet")
+                            .foregroundColor(.secondary)
+                            .padding(.top, 40)
                     }
                 }
             }
@@ -55,18 +75,121 @@ struct HistoryView: View {
     }
 }
 
-// MARK: - History Day Row
+// MARK: - Today's History Row (syncs with slot list)
 
-struct HistoryDayRow: View {
-    let day: DailySlots
+struct TodayHistoryRow: View {
+    @ObservedObject var slotManager: SlotManager
+    @ObservedObject var statistics: Statistics
+    let isExpanded: Bool
+    let onToggleExpand: () -> Void
+
+    @State private var editingSlotIndex: Int?
+    @State private var editText: String = ""
+    @State private var newSlotName: String = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            // Day header
+            HStack {
+                Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .frame(width: 16)
+
+                Text("Today")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+
+                Spacer()
+
+                Text("\(slotManager.today.completedCount) completed")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .contentShape(Rectangle())
+            .onTapGesture { onToggleExpand() }
+
+            // Expanded content
+            if isExpanded {
+                VStack(spacing: 4) {
+                    // Completed slot list
+                    ForEach(0..<slotManager.today.completedCount, id: \.self) { index in
+                        let slot = slotManager.today.slots[index]
+                        HistorySlotRowView(
+                            name: slot.name,
+                            isEditing: editingSlotIndex == index,
+                            editText: $editText,
+                            onStartEditing: {
+                                editText = slot.name
+                                editingSlotIndex = index
+                            },
+                            onEndEditing: {
+                                slotManager.renameTodayCompletedSlot(at: index, newName: editText)
+                                editingSlotIndex = nil
+                            },
+                            onDelete: {
+                                slotManager.removeTodayCompletedSlot(at: index)
+                                statistics.updateDayCount(dateString: DailySlots.todayDateString(), completedCount: slotManager.today.completedCount)
+                            }
+                        )
+                    }
+
+                    // Add slot button
+                    HStack {
+                        TextField("Add completed slot...", text: $newSlotName)
+                            .textFieldStyle(.plain)
+                            .font(.caption)
+                            .onSubmit {
+                                if !newSlotName.trimmingCharacters(in: .whitespaces).isEmpty {
+                                    slotManager.addTodayCompletedSlot(name: newSlotName)
+                                    statistics.updateDayCount(dateString: DailySlots.todayDateString(), completedCount: slotManager.today.completedCount)
+                                    newSlotName = ""
+                                }
+                            }
+
+                        Button(action: {
+                            if !newSlotName.trimmingCharacters(in: .whitespaces).isEmpty {
+                                slotManager.addTodayCompletedSlot(name: newSlotName)
+                                statistics.updateDayCount(dateString: DailySlots.todayDateString(), completedCount: slotManager.today.completedCount)
+                                newSlotName = ""
+                            }
+                        }) {
+                            Image(systemName: "plus.circle")
+                                .font(.caption)
+                                .foregroundColor(.blue)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(newSlotName.trimmingCharacters(in: .whitespaces).isEmpty)
+                    }
+                    .padding(.leading, 16)
+                    .padding(.top, 4)
+                }
+                .padding(.bottom, 8)
+            }
+        }
+        .padding(8)
+        .background(Color.blue.opacity(0.1))
+        .cornerRadius(8)
+    }
+}
+
+// MARK: - Past Day History Row
+
+struct PastDayHistoryRow: View {
     let dayIndex: Int
     let isExpanded: Bool
     @ObservedObject var slotManager: SlotManager
+    @ObservedObject var statistics: Statistics
     let onToggleExpand: () -> Void
     let onDelete: () -> Void
 
     @State private var editingSlotIndex: Int?
     @State private var editText: String = ""
+    @State private var newSlotName: String = ""
+
+    private var day: DayHistory {
+        slotManager.history[dayIndex]
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -83,7 +206,7 @@ struct HistoryDayRow: View {
 
                 Spacer()
 
-                Text("\(day.completedCount)/\(day.slots.count)")
+                Text("\(day.completedSlotNames.count) completed")
                     .font(.caption)
                     .foregroundColor(.secondary)
 
@@ -101,62 +224,57 @@ struct HistoryDayRow: View {
             // Expanded content
             if isExpanded {
                 VStack(spacing: 4) {
-                    // Completion count adjuster
-                    HStack {
-                        Text("Completed:")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-
-                        Stepper(
-                            "\(day.completedCount)",
-                            value: Binding(
-                                get: { day.completedCount },
-                                set: { slotManager.setHistoryCompletedCount(dayIndex: dayIndex, count: $0) }
-                            ),
-                            in: 0...day.slots.count
-                        )
-                        .frame(width: 100)
-                    }
-                    .padding(.leading, 16)
-                    .padding(.top, 4)
-
-                    Divider()
-                        .padding(.leading, 16)
-
-                    // Slot list
-                    ForEach(Array(day.slots.enumerated()), id: \.element.id) { slotIndex, slot in
-                        HistorySlotRow(
-                            slot: slot,
-                            slotIndex: slotIndex,
-                            isCompleted: slotIndex < day.completedCount,
-                            isEditing: editingSlotIndex == slotIndex,
+                    // Completed slot list
+                    ForEach(Array(day.completedSlotNames.enumerated()), id: \.offset) { index, name in
+                        HistorySlotRowView(
+                            name: name,
+                            isEditing: editingSlotIndex == index,
                             editText: $editText,
                             onStartEditing: {
-                                editText = slot.name
-                                editingSlotIndex = slotIndex
+                                editText = name
+                                editingSlotIndex = index
                             },
                             onEndEditing: {
-                                slotManager.updateHistorySlot(dayIndex: dayIndex, slotIndex: slotIndex, newName: editText)
+                                slotManager.renameHistorySlot(dayIndex: dayIndex, slotIndex: index, newName: editText)
                                 editingSlotIndex = nil
                             },
                             onDelete: {
-                                slotManager.removeHistorySlot(dayIndex: dayIndex, slotIndex: slotIndex)
+                                let dateString = day.dateString
+                                slotManager.removeHistorySlot(dayIndex: dayIndex, slotIndex: index)
+                                statistics.updateDayCount(dateString: dateString, completedCount: slotManager.history[dayIndex].completedSlotNames.count)
                             }
                         )
                     }
 
                     // Add slot button
-                    Button(action: {
-                        slotManager.addHistorySlot(dayIndex: dayIndex)
-                    }) {
-                        HStack {
+                    HStack {
+                        TextField("Add completed slot...", text: $newSlotName)
+                            .textFieldStyle(.plain)
+                            .font(.caption)
+                            .onSubmit {
+                                if !newSlotName.trimmingCharacters(in: .whitespaces).isEmpty {
+                                    let dateString = day.dateString
+                                    slotManager.addHistorySlot(dayIndex: dayIndex, name: newSlotName)
+                                    statistics.updateDayCount(dateString: dateString, completedCount: slotManager.history[dayIndex].completedSlotNames.count)
+                                    newSlotName = ""
+                                }
+                            }
+
+                        Button(action: {
+                            if !newSlotName.trimmingCharacters(in: .whitespaces).isEmpty {
+                                let dateString = day.dateString
+                                slotManager.addHistorySlot(dayIndex: dayIndex, name: newSlotName)
+                                statistics.updateDayCount(dateString: dateString, completedCount: slotManager.history[dayIndex].completedSlotNames.count)
+                                newSlotName = ""
+                            }
+                        }) {
                             Image(systemName: "plus.circle")
-                            Text("Add Slot")
+                                .font(.caption)
+                                .foregroundColor(.blue)
                         }
-                        .font(.caption)
-                        .foregroundColor(.blue)
+                        .buttonStyle(.plain)
+                        .disabled(newSlotName.trimmingCharacters(in: .whitespaces).isEmpty)
                     }
-                    .buttonStyle(.plain)
                     .padding(.leading, 16)
                     .padding(.top, 4)
                 }
@@ -181,10 +299,8 @@ struct HistoryDayRow: View {
 
 // MARK: - History Slot Row
 
-struct HistorySlotRow: View {
-    let slot: Slot
-    let slotIndex: Int
-    let isCompleted: Bool
+struct HistorySlotRowView: View {
+    let name: String
     let isEditing: Bool
     @Binding var editText: String
     let onStartEditing: () -> Void
@@ -195,8 +311,8 @@ struct HistorySlotRow: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
-                .foregroundColor(isCompleted ? .green : .secondary)
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundColor(.green)
                 .font(.caption)
 
             if isEditing {
@@ -207,10 +323,8 @@ struct HistorySlotRow: View {
                     .onSubmit { onEndEditing() }
                     .onAppear { isFocused = true }
             } else {
-                Text(slot.name)
+                Text(name)
                     .font(.caption)
-                    .foregroundColor(isCompleted ? .secondary : .primary)
-                    .strikethrough(isCompleted)
                     .onTapGesture(count: 2) { onStartEditing() }
 
                 Spacer()
@@ -236,7 +350,5 @@ struct HistorySlotRow: View {
 }
 
 #Preview {
-    let manager = SlotManager()
-    // Add some test history
-    return HistoryView(slotManager: manager)
+    HistoryView(slotManager: SlotManager(), statistics: Statistics())
 }

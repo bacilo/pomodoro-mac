@@ -4,6 +4,14 @@ struct MenuBarView: View {
     @ObservedObject var viewModel: PomodoroViewModel
     @State private var selectedTab: Tab = .timer
 
+    // Placeholder prompting state
+    @State private var showingPlaceholderPrompt = false
+    @State private var placeholdersToFill: [String] = []
+    @State private var currentPlaceholderIndex = 0
+    @State private var placeholderReplacements: [String: String] = [:]
+    @State private var currentPlaceholderValue: String = ""
+    @State private var hasCheckedPlaceholders = false
+
     enum Tab {
         case timer
         case slots
@@ -40,7 +48,7 @@ struct MenuBarView: View {
                     }
                 }
             }
-            .frame(height: 340)
+            .frame(height: 420)
 
             Divider()
 
@@ -61,6 +69,55 @@ struct MenuBarView: View {
             .padding(.vertical, 8)
         }
         .frame(width: 280)
+        .onAppear {
+            checkForUnfilledPlaceholders()
+        }
+        .sheet(isPresented: $showingPlaceholderPrompt) {
+            PlaceholderPromptView(
+                placeholder: placeholdersToFill.indices.contains(currentPlaceholderIndex)
+                    ? placeholdersToFill[currentPlaceholderIndex] : "",
+                value: $currentPlaceholderValue,
+                onSubmit: { submitPlaceholderValue() },
+                onCancel: { cancelPlaceholderPrompt() }
+            )
+        }
+    }
+
+    private func checkForUnfilledPlaceholders() {
+        // Only check once per popover open
+        guard !hasCheckedPlaceholders else { return }
+        hasCheckedPlaceholders = true
+
+        let placeholders = viewModel.slotManager.getTodayUnfilledPlaceholders()
+        if !placeholders.isEmpty {
+            placeholdersToFill = placeholders
+            currentPlaceholderIndex = 0
+            placeholderReplacements = [:]
+            currentPlaceholderValue = ""
+            showingPlaceholderPrompt = true
+        }
+    }
+
+    private func submitPlaceholderValue() {
+        let placeholder = placeholdersToFill[currentPlaceholderIndex]
+        placeholderReplacements[placeholder] = currentPlaceholderValue
+
+        currentPlaceholderIndex += 1
+        currentPlaceholderValue = ""
+
+        if currentPlaceholderIndex >= placeholdersToFill.count {
+            // All placeholders filled, apply replacements
+            showingPlaceholderPrompt = false
+            viewModel.slotManager.fillTodayPlaceholders(placeholderReplacements)
+        }
+    }
+
+    private func cancelPlaceholderPrompt() {
+        showingPlaceholderPrompt = false
+        placeholdersToFill = []
+        currentPlaceholderIndex = 0
+        placeholderReplacements = [:]
+        currentPlaceholderValue = ""
     }
 }
 

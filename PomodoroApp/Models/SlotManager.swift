@@ -3,14 +3,14 @@ import SwiftUI
 
 class SlotManager: ObservableObject {
     @Published var today: DailySlots
-    @Published var history: [DailySlots] = []
+    @Published var history: [DayHistory] = []  // Only completed slot names per day
 
     // Default template settings
     @AppStorage("defaultSlotCount") var defaultSlotCount: Int = 12
     @Published var defaultSlotNames: [String] = []
 
     private let todaySlotsKey = "pomodoroSlots"
-    private let historyKey = "pomodoroSlotsHistory"
+    private let historyKey = "pomodoroSlotsHistory_v2"  // New key for new format
     private let defaultNamesKey = "defaultSlotNames"
 
     init() {
@@ -34,6 +34,11 @@ class SlotManager: ObservableObject {
     var currentSlotName: String? {
         guard let index = nextIncompleteIndex else { return nil }
         return today.slots[index].name
+    }
+
+    /// Today's history entry (completed slot names)
+    var todayHistory: DayHistory {
+        DayHistory(dateString: today.dateString, completedSlotNames: today.completedSlotNames)
     }
 
     func isCompleted(at index: Int) -> Bool {
@@ -63,6 +68,7 @@ class SlotManager: ObservableObject {
         guard index >= 0 && index < today.slots.count else { return }
         today.slots[index].name = newName
         save()
+        // History for today auto-syncs via todayHistory computed property
     }
 
     func moveSlot(from source: IndexSet, to destination: Int) {
@@ -78,6 +84,16 @@ class SlotManager: ObservableObject {
 
     func resetCompletions() {
         today.completedCount = 0
+        save()
+    }
+
+    /// Mark a specific slot as incomplete (used when deleting from history)
+    func markSlotIncomplete(at index: Int) {
+        guard index >= 0 && index < today.completedCount else { return }
+        // Move this slot to the end of the list and decrement completedCount
+        let slot = today.slots.remove(at: index)
+        today.slots.append(slot)
+        today.completedCount -= 1
         save()
     }
 
@@ -121,16 +137,8 @@ class SlotManager: ObservableObject {
             return
         }
 
-        // Save current day to history if it has data
-        if !today.slots.isEmpty {
-            // Remove any existing entry for this date to avoid duplicates
-            history.removeAll { $0.dateString == today.dateString }
-            history.append(today)
-            // Keep last 30 days of history
-            if history.count > 30 {
-                history.removeFirst(history.count - 30)
-            }
-        }
+        // Save current day's completed slots to history
+        saveCurrentDayToHistory()
 
         // Create new day from templates
         var slots: [Slot] = []
@@ -140,6 +148,22 @@ class SlotManager: ObservableObject {
         }
         today = DailySlots(date: Date(), slots: slots, completedCount: 0)
         save()
+    }
+
+    private func saveCurrentDayToHistory() {
+        // Only save if there are completed slots
+        guard today.completedCount > 0 else { return }
+
+        let dayHistory = todayHistory
+
+        // Remove any existing entry for this date
+        history.removeAll { $0.dateString == today.dateString }
+        history.append(dayHistory)
+
+        // Keep last 30 days
+        if history.count > 30 {
+            history.removeFirst(history.count - 30)
+        }
     }
 
     /// Returns unique placeholders found in template names (text within square brackets)
@@ -163,18 +187,43 @@ class SlotManager: ObservableObject {
         return placeholders
     }
 
-    /// Apply template to today with placeholder replacements
-    func applyTemplateWithReplacements(_ replacements: [String: String]) {
-        let todayString = DailySlots.todayDateString()
+    /// Returns unique unfilled placeholders in today's slot names
+    func getTodayUnfilledPlaceholders() -> [String] {
+        var placeholders: [String] = []
+        let pattern = "\\[([^\\]]+)\\]"
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return [] }
 
-        // Save current day to history if it has data
-        if !today.slots.isEmpty {
-            history.removeAll { $0.dateString == today.dateString }
-            history.append(today)
-            if history.count > 30 {
-                history.removeFirst(history.count - 30)
+        for slot in today.slots {
+            let range = NSRange(slot.name.startIndex..., in: slot.name)
+            let matches = regex.matches(in: slot.name, range: range)
+            for match in matches {
+                if let matchRange = Range(match.range(at: 1), in: slot.name) {
+                    let placeholder = String(slot.name[matchRange])
+                    if !placeholders.contains(placeholder) {
+                        placeholders.append(placeholder)
+                    }
+                }
             }
         }
+        return placeholders
+    }
+
+    /// Fill placeholders in today's slots
+    func fillTodayPlaceholders(_ replacements: [String: String]) {
+        for i in 0..<today.slots.count {
+            var name = today.slots[i].name
+            for (placeholder, replacement) in replacements {
+                name = name.replacingOccurrences(of: "[\(placeholder)]", with: replacement)
+            }
+            today.slots[i].name = name
+        }
+        save()
+    }
+
+    /// Apply template to today with placeholder replacements
+    func applyTemplateWithReplacements(_ replacements: [String: String]) {
+        // Save current day's completed slots to history
+        saveCurrentDayToHistory()
 
         // Create new day from templates with replacements
         var slots: [Slot] = []
@@ -190,42 +239,58 @@ class SlotManager: ObservableObject {
         save()
     }
 
-    // MARK: - History Editing
+    // MARK: - History Editing (for past days)
 
-    func updateHistorySlot(dayIndex: Int, slotIndex: Int, newName: String) {
+    func renameHistorySlot(dayIndex: Int, slotIndex: Int, newName: String) {
         guard dayIndex >= 0 && dayIndex < history.count else { return }
-        guard slotIndex >= 0 && slotIndex < history[dayIndex].slots.count else { return }
-        history[dayIndex].slots[slotIndex].name = newName
+        guard slotIndex >= 0 && slotIndex < history[dayIndex].completedSlotNames.count else { return }
+        history[dayIndex].completedSlotNames[slotIndex] = newName
         save()
     }
 
     func removeHistorySlot(dayIndex: Int, slotIndex: Int) {
         guard dayIndex >= 0 && dayIndex < history.count else { return }
-        guard slotIndex >= 0 && slotIndex < history[dayIndex].slots.count else { return }
-        history[dayIndex].slots.remove(at: slotIndex)
-        // Adjust completedCount if we removed a completed slot
-        if slotIndex < history[dayIndex].completedCount {
-            history[dayIndex].completedCount = max(0, history[dayIndex].completedCount - 1)
-        }
+        guard slotIndex >= 0 && slotIndex < history[dayIndex].completedSlotNames.count else { return }
+        history[dayIndex].completedSlotNames.remove(at: slotIndex)
         save()
     }
 
     func addHistorySlot(dayIndex: Int, name: String = "New Slot") {
         guard dayIndex >= 0 && dayIndex < history.count else { return }
-        history[dayIndex].slots.append(Slot(name: name))
-        save()
-    }
-
-    func setHistoryCompletedCount(dayIndex: Int, count: Int) {
-        guard dayIndex >= 0 && dayIndex < history.count else { return }
-        let maxCount = history[dayIndex].slots.count
-        history[dayIndex].completedCount = max(0, min(count, maxCount))
+        history[dayIndex].completedSlotNames.append(name)
         save()
     }
 
     func deleteHistoryDay(dayIndex: Int) {
         guard dayIndex >= 0 && dayIndex < history.count else { return }
         history.remove(at: dayIndex)
+        save()
+    }
+
+    func clearAllHistory() {
+        history = []
+        save()
+    }
+
+    // MARK: - Today's History Editing (syncs with slot list)
+
+    func renameTodayCompletedSlot(at index: Int, newName: String) {
+        // Renaming a completed slot updates the slot list
+        guard index >= 0 && index < today.completedCount else { return }
+        today.slots[index].name = newName
+        save()
+    }
+
+    func removeTodayCompletedSlot(at index: Int) {
+        // Removing from today's history = marking incomplete
+        markSlotIncomplete(at: index)
+    }
+
+    func addTodayCompletedSlot(name: String) {
+        // Adding to today's history = adding a slot and marking it complete
+        let slot = Slot(name: name)
+        today.slots.insert(slot, at: today.completedCount)
+        today.completedCount += 1
         save()
     }
 
@@ -262,20 +327,50 @@ class SlotManager: ObservableObject {
             defaultSlotNames = (1...defaultSlotCount).map { "Slot \($0)" }
         }
 
-        // Load history
+        // Load history (new format)
         if let historyData = UserDefaults.standard.data(forKey: historyKey),
-           let loadedHistory = try? decoder.decode([DailySlots].self, from: historyData) {
+           let loadedHistory = try? decoder.decode([DayHistory].self, from: historyData) {
             history = loadedHistory
         }
 
         // Load today's slots
+        let todayString = DailySlots.todayDateString()
         if let todayData = UserDefaults.standard.data(forKey: todaySlotsKey),
-           let loadedToday = try? decoder.decode(DailySlots.self, from: todayData) {
+           let loadedToday = try? decoder.decode(DailySlots.self, from: todayData),
+           loadedToday.dateString == todayString {
+            // Found valid saved state for today
             today = loadedToday
         } else {
-            // No saved data - initialize with defaults
-            initializeNewDay(force: true)
+            // No saved state for today - check if there's history for today
+            if let todayHistoryEntry = history.first(where: { $0.dateString == todayString }) {
+                // Restore from history: completed slots from history + remaining from template
+                restoreTodayFromHistory(todayHistoryEntry)
+            } else {
+                // No state, no history - initialize fresh from templates
+                initializeNewDay(force: true)
+            }
         }
+    }
+
+    private func restoreTodayFromHistory(_ historyEntry: DayHistory) {
+        var slots: [Slot] = []
+
+        // First, add completed slots from history
+        for name in historyEntry.completedSlotNames {
+            slots.append(Slot(name: name))
+        }
+        let completedCount = slots.count
+
+        // Then, add remaining slots from template (up to defaultSlotCount)
+        let remainingCount = max(0, defaultSlotCount - completedCount)
+        for i in 0..<remainingCount {
+            let templateIndex = completedCount + i
+            let name = templateIndex < defaultSlotNames.count ? defaultSlotNames[templateIndex] : "Slot \(templateIndex + 1)"
+            slots.append(Slot(name: name))
+        }
+
+        today = DailySlots(dateString: historyEntry.dateString, slots: slots, completedCount: completedCount)
+        save()
     }
 
     private func checkForNewDay() {

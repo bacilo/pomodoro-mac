@@ -102,17 +102,6 @@ struct TimerView: View {
             .buttonStyle(.bordered)
             .help("Skip to Next")
             .disabled(viewModel.timerState == .idle)
-
-            // Reset
-            Button(action: { viewModel.reset() }) {
-                Image(systemName: "stop.fill")
-                    .font(.system(size: 14))
-                    .frame(width: 36, height: 36)
-            }
-            .buttonStyle(.bordered)
-            .tint(.red)
-            .help("Reset")
-            .disabled(viewModel.timerState == .idle)
         }
     }
 

@@ -32,6 +32,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     var blinkTimer: Timer?
     var isBlinkOn: Bool = true
 
+    // Marquee effect for slot name
+    var marqueeTimer: Timer?
+    var marqueeOffset: Int = 0
+    var lastSlotName: String = ""
+    let marqueeMaxChars = 12  // Max visible characters for slot name
+    let marqueePadding = "   "  // Padding between repeated text
+
     private var isRunningTests: Bool {
         NSClassFromString("XCTestCase") != nil
     }
@@ -49,7 +56,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
         // Create the popover
         popover = NSPopover()
-        popover.contentSize = NSSize(width: 280, height: 420)
+        popover.contentSize = NSSize(width: 280, height: 500)
         popover.behavior = .transient
         popover.delegate = self
         popover.contentViewController = NSHostingController(rootView: MenuBarView(viewModel: viewModel))
@@ -111,6 +118,35 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             isBlinkOn = true
         }
 
+        // Manage marquee timer for slot name display
+        let shouldShowSlotName = viewModel.settings.showSlotNameInMenuBar &&
+                                 viewModel.timerState == .work &&
+                                 viewModel.currentSlotName != nil
+        let slotName = viewModel.currentSlotName ?? ""
+
+        // Reset marquee offset if slot name changed
+        if slotName != lastSlotName {
+            lastSlotName = slotName
+            marqueeOffset = 0
+        }
+
+        // Start/stop marquee timer based on whether we need to scroll
+        let needsMarquee = shouldShowSlotName && slotName.count > marqueeMaxChars
+        if needsMarquee && marqueeTimer == nil {
+            marqueeTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [weak self] _ in
+                Task { @MainActor in
+                    guard let self = self else { return }
+                    let fullText = self.lastSlotName + self.marqueePadding
+                    self.marqueeOffset = (self.marqueeOffset + 1) % fullText.count
+                    self.updateStatusButtonAppearance()
+                }
+            }
+        } else if !needsMarquee && marqueeTimer != nil {
+            marqueeTimer?.invalidate()
+            marqueeTimer = nil
+            marqueeOffset = 0
+        }
+
         updateStatusButtonAppearance()
     }
 
@@ -139,11 +175,45 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
                 textColor = .systemRed
             }
 
+            // Build the title string
+            var displayText = " \(title)"
+
+            // Add slot name if enabled and in work mode
+            if viewModel.settings.showSlotNameInMenuBar &&
+               viewModel.timerState == .work,
+               let slotName = viewModel.currentSlotName {
+
+                var visibleSlotName: String
+                if slotName.count <= marqueeMaxChars {
+                    // Short name, pad to fixed width
+                    visibleSlotName = slotName
+                } else {
+                    // Long name, apply marquee effect
+                    let fullText = slotName + marqueePadding
+                    let startIndex = fullText.index(fullText.startIndex, offsetBy: marqueeOffset % fullText.count)
+                    var visiblePart = ""
+                    var currentIndex = startIndex
+                    for _ in 0..<marqueeMaxChars {
+                        visiblePart.append(fullText[currentIndex])
+                        currentIndex = fullText.index(after: currentIndex)
+                        if currentIndex == fullText.endIndex {
+                            currentIndex = fullText.startIndex
+                        }
+                    }
+                    visibleSlotName = visiblePart
+                }
+                // Pad to fixed width to prevent jitter
+                while visibleSlotName.count < marqueeMaxChars {
+                    visibleSlotName += " "
+                }
+                displayText += " · \(visibleSlotName)"
+            }
+
             let attributes: [NSAttributedString.Key: Any] = [
                 .font: font,
                 .foregroundColor: textColor
             ]
-            button.attributedTitle = NSAttributedString(string: " \(title)", attributes: attributes)
+            button.attributedTitle = NSAttributedString(string: displayText, attributes: attributes)
             button.imagePosition = .imageLeading
         }
     }
@@ -185,7 +255,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
             menu.addItem(withTitle: "Done (Complete Early)", action: #selector(completeEarly), keyEquivalent: "")
             menu.addItem(withTitle: "Skip", action: #selector(skipTimer), keyEquivalent: "")
-            menu.addItem(withTitle: "Reset", action: #selector(resetTimer), keyEquivalent: "")
         }
 
         menu.addItem(NSMenuItem.separator())
@@ -197,6 +266,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     }
 
     @objc private func startWork() {
+        // Check for unfilled placeholders first
+        let placeholders = viewModel.slotManager.getTodayUnfilledPlaceholders()
+        if !placeholders.isEmpty {
+            // Open popover to prompt for placeholders
+            togglePopover()
+            return
+        }
         viewModel.startWork()
     }
 
@@ -214,10 +290,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
     @objc private func skipTimer() {
         viewModel.skip()
-    }
-
-    @objc private func resetTimer() {
-        viewModel.reset()
     }
 
     @objc private func quitApp() {

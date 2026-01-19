@@ -9,6 +9,7 @@ final class SlotManagerTests: XCTestCase {
         // Clear all slot-related UserDefaults before each test
         UserDefaults.standard.removeObject(forKey: "pomodoroSlots")
         UserDefaults.standard.removeObject(forKey: "pomodoroSlotsHistory")
+        UserDefaults.standard.removeObject(forKey: "pomodoroSlotsHistory_v2")
         UserDefaults.standard.removeObject(forKey: "defaultSlotCount")
         UserDefaults.standard.removeObject(forKey: "defaultSlotNames")
         slotManager = SlotManager()
@@ -18,6 +19,7 @@ final class SlotManagerTests: XCTestCase {
         slotManager = nil
         UserDefaults.standard.removeObject(forKey: "pomodoroSlots")
         UserDefaults.standard.removeObject(forKey: "pomodoroSlotsHistory")
+        UserDefaults.standard.removeObject(forKey: "pomodoroSlotsHistory_v2")
         UserDefaults.standard.removeObject(forKey: "defaultSlotCount")
         UserDefaults.standard.removeObject(forKey: "defaultSlotNames")
         super.tearDown()
@@ -241,8 +243,112 @@ final class SlotManagerTests: XCTestCase {
         slotManager.initializeNewDay(force: true)
 
         XCTAssertEqual(slotManager.history.count, 1)
-        XCTAssertEqual(slotManager.history[0].slots[0].name, "Yesterday Task")
-        XCTAssertEqual(slotManager.history[0].completedCount, 1)
+        XCTAssertEqual(slotManager.history[0].completedSlotNames.count, 1)
+        XCTAssertEqual(slotManager.history[0].completedSlotNames[0], "Yesterday Task")
+    }
+
+    func testHistory_OnlyStoresCompletedSlots() {
+        slotManager.renameSlot(at: 0, to: "Task A")
+        slotManager.renameSlot(at: 1, to: "Task B")
+        slotManager.renameSlot(at: 2, to: "Task C")
+        slotManager.advanceCompletion() // Complete Task A
+        slotManager.advanceCompletion() // Complete Task B
+        // Task C remains incomplete
+
+        slotManager.initializeNewDay(force: true)
+
+        XCTAssertEqual(slotManager.history[0].completedSlotNames.count, 2)
+        XCTAssertEqual(slotManager.history[0].completedSlotNames[0], "Task A")
+        XCTAssertEqual(slotManager.history[0].completedSlotNames[1], "Task B")
+    }
+
+    // MARK: - Today's History Editing Tests (Bidirectional Sync)
+
+    func testRenameTodayCompletedSlot_UpdatesSlotList() {
+        slotManager.renameSlot(at: 0, to: "Original Name")
+        slotManager.advanceCompletion()
+
+        slotManager.renameTodayCompletedSlot(at: 0, newName: "New Name")
+
+        XCTAssertEqual(slotManager.today.slots[0].name, "New Name")
+    }
+
+    func testRemoveTodayCompletedSlot_MarksIncomplete() {
+        slotManager.advanceCompletion()
+        slotManager.advanceCompletion()
+        XCTAssertEqual(slotManager.today.completedCount, 2)
+
+        slotManager.removeTodayCompletedSlot(at: 0)
+
+        XCTAssertEqual(slotManager.today.completedCount, 1)
+        // The removed slot should now be at the end
+        XCTAssertEqual(slotManager.today.slots.count, 12)
+    }
+
+    func testAddTodayCompletedSlot_InsertsAtCompletedPosition() {
+        slotManager.advanceCompletion() // 1 completed
+        let initialCount = slotManager.today.slots.count
+
+        slotManager.addTodayCompletedSlot(name: "New Completed Task")
+
+        XCTAssertEqual(slotManager.today.completedCount, 2)
+        XCTAssertEqual(slotManager.today.slots.count, initialCount + 1)
+        XCTAssertEqual(slotManager.today.slots[1].name, "New Completed Task")
+    }
+
+    func testMarkSlotIncomplete_MovesToEnd() {
+        slotManager.renameSlot(at: 0, to: "Task A")
+        slotManager.renameSlot(at: 1, to: "Task B")
+        slotManager.advanceCompletion()
+        slotManager.advanceCompletion()
+
+        slotManager.markSlotIncomplete(at: 0)
+
+        XCTAssertEqual(slotManager.today.completedCount, 1)
+        XCTAssertEqual(slotManager.today.slots[0].name, "Task B")
+        XCTAssertEqual(slotManager.today.slots.last?.name, "Task A")
+    }
+
+    // MARK: - History Day Editing Tests
+
+    func testRenameHistorySlot() {
+        slotManager.advanceCompletion()
+        slotManager.initializeNewDay(force: true)
+
+        slotManager.renameHistorySlot(dayIndex: 0, slotIndex: 0, newName: "Renamed")
+
+        XCTAssertEqual(slotManager.history[0].completedSlotNames[0], "Renamed")
+    }
+
+    func testRemoveHistorySlot() {
+        slotManager.advanceCompletion()
+        slotManager.advanceCompletion()
+        slotManager.initializeNewDay(force: true)
+
+        slotManager.removeHistorySlot(dayIndex: 0, slotIndex: 0)
+
+        XCTAssertEqual(slotManager.history[0].completedSlotNames.count, 1)
+    }
+
+    func testAddHistorySlot() {
+        slotManager.advanceCompletion()
+        slotManager.initializeNewDay(force: true)
+
+        slotManager.addHistorySlot(dayIndex: 0, name: "Added Task")
+
+        XCTAssertEqual(slotManager.history[0].completedSlotNames.count, 2)
+        XCTAssertEqual(slotManager.history[0].completedSlotNames[1], "Added Task")
+    }
+
+    func testDeleteHistoryDay() {
+        slotManager.advanceCompletion()
+        slotManager.initializeNewDay(force: true)
+
+        XCTAssertEqual(slotManager.history.count, 1)
+
+        slotManager.deleteHistoryDay(dayIndex: 0)
+
+        XCTAssertEqual(slotManager.history.count, 0)
     }
 
     // MARK: - Set Slot Count Tests

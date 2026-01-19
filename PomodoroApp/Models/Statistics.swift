@@ -95,6 +95,35 @@ class Statistics: ObservableObject {
         save()
     }
 
+    func clearAll() {
+        dailyStats = []
+        sessions = []
+        save()
+    }
+
+    /// Update the completed count for a specific day (called when history is modified)
+    func updateDayCount(dateString: String, completedCount: Int) {
+        if let index = dailyStats.firstIndex(where: { $0.dateString == dateString }) {
+            dailyStats[index].completedPomodoros = completedCount
+        } else if completedCount > 0 {
+            // Create a new entry for this day
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            if let date = formatter.date(from: dateString) {
+                var newStats = DailyStats(date: date)
+                newStats.completedPomodoros = completedCount
+                dailyStats.append(newStats)
+            }
+        }
+        save()
+    }
+
+    /// Remove a day's stats entirely
+    func removeDay(dateString: String) {
+        dailyStats.removeAll { $0.dateString == dateString }
+        save()
+    }
+
     private func save() {
         let encoder = JSONEncoder()
         if let statsData = try? encoder.encode(dailyStats) {

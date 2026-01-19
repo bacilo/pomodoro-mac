@@ -132,33 +132,7 @@ final class PomodoroViewModelTests: XCTestCase {
         XCTAssertTrue(viewModel.isRunning)
     }
 
-    // MARK: - Reset Tests
-
-    func testReset() {
-        viewModel.startWork()
-        viewModel.reset()
-
-        XCTAssertEqual(viewModel.timerState, .idle)
-        XCTAssertFalse(viewModel.isRunning)
-        XCTAssertEqual(viewModel.timeRemaining, settings.workDurationSeconds)
-    }
-
-    func testReset_ResetsSlotCompletions() {
-        // Complete some pomodoros
-        viewModel.startWork()
-        viewModel.completeEarly()
-        viewModel.startWork()
-        viewModel.completeEarly()
-        XCTAssertEqual(viewModel.completedPomodoros, 2)
-        XCTAssertEqual(slotManager.today.completedCount, 2)
-
-        // Reset should clear both
-        viewModel.startWork()
-        viewModel.reset()
-
-        XCTAssertEqual(viewModel.completedPomodoros, 0)
-        XCTAssertEqual(slotManager.today.completedCount, 0)
-    }
+    // MARK: - Sync Tests
 
     func testCompletedPomodoros_SyncsWithSlotManager() {
         // Verify that completedPomodoros is derived from slotManager

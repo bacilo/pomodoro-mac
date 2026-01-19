@@ -52,6 +52,10 @@ struct SettingsView: View {
                 Toggle("Show notifications", isOn: $settings.showNotifications)
                 Toggle("Play sound", isOn: $settings.playSound)
             }
+
+            Section("Menu Bar") {
+                Toggle("Show slot name", isOn: $settings.showSlotNameInMenuBar)
+            }
         }
         .formStyle(.grouped)
         .scrollDisabled(true)

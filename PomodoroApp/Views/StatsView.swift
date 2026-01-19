@@ -4,6 +4,7 @@ struct StatsView: View {
     @ObservedObject var statistics: Statistics
     @ObservedObject var slotManager: SlotManager
     @State private var showingHistory = false
+    @State private var showingClearConfirmation = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -12,6 +13,14 @@ struct StatsView: View {
                     .font(.headline)
 
                 Spacer()
+
+                Button(action: { showingClearConfirmation = true }) {
+                    Image(systemName: "trash")
+                        .font(.system(size: 12))
+                        .foregroundColor(.red.opacity(0.7))
+                }
+                .buttonStyle(.plain)
+                .help("Clear all statistics and history")
 
                 Button(action: { showingHistory = true }) {
                     Image(systemName: "clock.arrow.circlepath")
@@ -58,7 +67,16 @@ struct StatsView: View {
         }
         .padding()
         .sheet(isPresented: $showingHistory) {
-            HistoryView(slotManager: slotManager)
+            HistoryView(slotManager: slotManager, statistics: statistics)
+        }
+        .alert("Clear All Data?", isPresented: $showingClearConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Clear All", role: .destructive) {
+                statistics.clearAll()
+                slotManager.clearAllHistory()
+            }
+        } message: {
+            Text("This will permanently delete all statistics and slot history. Today's slots will not be affected.")
         }
     }
 

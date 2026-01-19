@@ -96,15 +96,6 @@ class PomodoroViewModel: ObservableObject {
         startTimer()
     }
 
-    func reset() {
-        pause()
-        recordIncompleteSession()
-        timerState = .idle
-        timeRemaining = settings.workDurationSeconds
-        sessionStartTime = nil
-        slotManager.resetCompletions()  // Reset slot completions too
-    }
-
     func skip() {
         recordIncompleteSession()
         transitionToNextState()
