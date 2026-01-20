@@ -13,6 +13,7 @@ struct SlotTemplatesView: View {
     @State private var currentPlaceholderIndex = 0
     @State private var placeholderReplacements: [String: String] = [:]
     @State private var currentPlaceholderValue: String = ""
+    @State private var currentPlaceholder: String = ""
 
     var body: some View {
         VStack(spacing: 12) {
@@ -110,8 +111,7 @@ struct SlotTemplatesView: View {
         .frame(width: 280, height: 380)
         .sheet(isPresented: $showingPlaceholderPrompt) {
             PlaceholderPromptView(
-                placeholder: placeholdersToFill.indices.contains(currentPlaceholderIndex)
-                    ? placeholdersToFill[currentPlaceholderIndex] : "",
+                placeholder: $currentPlaceholder,
                 value: $currentPlaceholderValue,
                 onSubmit: { submitPlaceholderValue() },
                 onCancel: { cancelPlaceholderPrompt() }
@@ -129,6 +129,7 @@ struct SlotTemplatesView: View {
             // Start placeholder prompting
             placeholdersToFill = placeholders
             currentPlaceholderIndex = 0
+            currentPlaceholder = placeholders[0]
             placeholderReplacements = [:]
             currentPlaceholderValue = ""
             showingPlaceholderPrompt = true
@@ -136,8 +137,7 @@ struct SlotTemplatesView: View {
     }
 
     private func submitPlaceholderValue() {
-        let placeholder = placeholdersToFill[currentPlaceholderIndex]
-        placeholderReplacements[placeholder] = currentPlaceholderValue
+        placeholderReplacements[currentPlaceholder] = currentPlaceholderValue
 
         currentPlaceholderIndex += 1
         currentPlaceholderValue = ""
@@ -147,6 +147,9 @@ struct SlotTemplatesView: View {
             showingPlaceholderPrompt = false
             slotManager.applyTemplateWithReplacements(placeholderReplacements)
             dismiss()
+        } else {
+            // Update to next placeholder
+            currentPlaceholder = placeholdersToFill[currentPlaceholderIndex]
         }
     }
 
@@ -154,6 +157,7 @@ struct SlotTemplatesView: View {
         showingPlaceholderPrompt = false
         placeholdersToFill = []
         currentPlaceholderIndex = 0
+        currentPlaceholder = ""
         placeholderReplacements = [:]
         currentPlaceholderValue = ""
     }
@@ -162,7 +166,7 @@ struct SlotTemplatesView: View {
 // MARK: - Placeholder Prompt View
 
 struct PlaceholderPromptView: View {
-    let placeholder: String
+    @Binding var placeholder: String
     @Binding var value: String
     let onSubmit: () -> Void
     let onCancel: () -> Void

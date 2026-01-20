@@ -351,6 +351,51 @@ final class SlotManagerTests: XCTestCase {
         XCTAssertEqual(slotManager.history.count, 0)
     }
 
+    // MARK: - Check For New Day Tests
+
+    func testCheckForNewDay_ReturnsFalse_WhenSameDay() {
+        // When it's still the same day, checkForNewDay should return false
+        let result = slotManager.checkForNewDay()
+        XCTAssertFalse(result)
+    }
+
+    func testCheckForNewDay_ReturnsTrue_WhenDateChanges() {
+        // Simulate date change by manually setting today to a past date
+        // First, complete some work so we can verify history was saved
+        slotManager.renameSlot(at: 0, to: "Yesterday Work")
+        slotManager.advanceCompletion()
+
+        // Manually create a past day state by modifying today directly
+        // We'll use the fact that DailySlots can be created with a custom dateString
+        let yesterdayString = "2020-01-01"  // A date in the past
+        slotManager.today = DailySlots(dateString: yesterdayString, slots: slotManager.today.slots, completedCount: slotManager.today.completedCount)
+
+        // Now checkForNewDay should detect the mismatch and return true
+        let result = slotManager.checkForNewDay()
+        XCTAssertTrue(result)
+
+        // Verify new day was initialized
+        XCTAssertEqual(slotManager.today.completedCount, 0)
+        XCTAssertNotEqual(slotManager.today.dateString, yesterdayString)
+    }
+
+    func testCheckForNewDay_SavesHistory_WhenDateChanges() {
+        slotManager.renameSlot(at: 0, to: "Task From Old Day")
+        slotManager.advanceCompletion()
+
+        // Simulate a past date
+        let pastDateString = "2020-01-01"
+        slotManager.today = DailySlots(dateString: pastDateString, slots: slotManager.today.slots, completedCount: slotManager.today.completedCount)
+
+        let initialHistoryCount = slotManager.history.count
+
+        _ = slotManager.checkForNewDay()
+
+        // History should have been saved
+        XCTAssertEqual(slotManager.history.count, initialHistoryCount + 1)
+        XCTAssertEqual(slotManager.history.last?.completedSlotNames.first, "Task From Old Day")
+    }
+
     // MARK: - Set Slot Count Tests
 
     func testSetTodaySlotCount_AddsSlots() {

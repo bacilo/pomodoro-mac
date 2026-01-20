@@ -382,10 +382,15 @@ class SlotManager: ObservableObject {
         save()
     }
 
-    private func checkForNewDay() {
+    /// Checks if a new day has started and initializes the new day if needed.
+    /// - Returns: `true` if a new day was detected and initialized, `false` otherwise.
+    @discardableResult
+    func checkForNewDay() -> Bool {
         let todayString = DailySlots.todayDateString()
         if today.dateString != todayString {
             initializeNewDay()
+            return true
         }
+        return false
     }
 }

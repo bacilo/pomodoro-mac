@@ -10,6 +10,7 @@ struct MenuBarView: View {
     @State private var currentPlaceholderIndex = 0
     @State private var placeholderReplacements: [String: String] = [:]
     @State private var currentPlaceholderValue: String = ""
+    @State private var currentPlaceholder: String = ""
     @State private var hasCheckedPlaceholders = false
 
     enum Tab {
@@ -70,12 +71,17 @@ struct MenuBarView: View {
         }
         .frame(width: 280)
         .onAppear {
+            // Check for new day first - this resets slots if needed
+            let isNewDay = viewModel.slotManager.checkForNewDay()
+            if isNewDay {
+                // Reset placeholder check flag so prompts appear for new day
+                hasCheckedPlaceholders = false
+            }
             checkForUnfilledPlaceholders()
         }
         .sheet(isPresented: $showingPlaceholderPrompt) {
             PlaceholderPromptView(
-                placeholder: placeholdersToFill.indices.contains(currentPlaceholderIndex)
-                    ? placeholdersToFill[currentPlaceholderIndex] : "",
+                placeholder: $currentPlaceholder,
                 value: $currentPlaceholderValue,
                 onSubmit: { submitPlaceholderValue() },
                 onCancel: { cancelPlaceholderPrompt() }
@@ -92,6 +98,7 @@ struct MenuBarView: View {
         if !placeholders.isEmpty {
             placeholdersToFill = placeholders
             currentPlaceholderIndex = 0
+            currentPlaceholder = placeholders[0]
             placeholderReplacements = [:]
             currentPlaceholderValue = ""
             showingPlaceholderPrompt = true
@@ -99,8 +106,7 @@ struct MenuBarView: View {
     }
 
     private func submitPlaceholderValue() {
-        let placeholder = placeholdersToFill[currentPlaceholderIndex]
-        placeholderReplacements[placeholder] = currentPlaceholderValue
+        placeholderReplacements[currentPlaceholder] = currentPlaceholderValue
 
         currentPlaceholderIndex += 1
         currentPlaceholderValue = ""
@@ -109,6 +115,9 @@ struct MenuBarView: View {
             // All placeholders filled, apply replacements
             showingPlaceholderPrompt = false
             viewModel.slotManager.fillTodayPlaceholders(placeholderReplacements)
+        } else {
+            // Update to next placeholder
+            currentPlaceholder = placeholdersToFill[currentPlaceholderIndex]
         }
     }
 
@@ -116,6 +125,7 @@ struct MenuBarView: View {
         showingPlaceholderPrompt = false
         placeholdersToFill = []
         currentPlaceholderIndex = 0
+        currentPlaceholder = ""
         placeholderReplacements = [:]
         currentPlaceholderValue = ""
     }
