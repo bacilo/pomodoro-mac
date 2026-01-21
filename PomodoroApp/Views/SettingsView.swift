@@ -1,7 +1,9 @@
 import SwiftUI
+import AppKit
 
 struct SettingsView: View {
     @ObservedObject var settings: Settings
+    @State private var selectedSound: CompletionSound = .glass
 
     var body: some View {
         Form {
@@ -51,6 +53,24 @@ struct SettingsView: View {
             Section("Notifications") {
                 Toggle("Show notifications", isOn: $settings.showNotifications)
                 Toggle("Play sound", isOn: $settings.playSound)
+
+                if settings.playSound {
+                    Picker("Sound", selection: $selectedSound) {
+                        ForEach(CompletionSound.allCases, id: \.self) { sound in
+                            Text(sound.displayName).tag(sound)
+                        }
+                    }
+                    .onChange(of: selectedSound) { newValue in
+                        settings.completionSound = newValue
+                        // Play preview
+                        if let sound = NSSound(named: NSSound.Name(newValue.rawValue)) {
+                            sound.play()
+                        }
+                    }
+                }
+            }
+            .onAppear {
+                selectedSound = settings.completionSound
             }
 
             Section("Menu Bar") {

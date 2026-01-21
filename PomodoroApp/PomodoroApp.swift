@@ -54,6 +54,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
         viewModel = PomodoroViewModel()
 
+        // Check for new day when app becomes active (e.g., after sleep or next day)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(applicationDidBecomeActive),
+            name: NSApplication.didBecomeActiveNotification,
+            object: nil
+        )
+
         // Create the popover
         popover = NSPopover()
         popover.contentSize = NSSize(width: 280, height: 500)
@@ -321,5 +329,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
     @objc private func quitApp() {
         NSApp.terminate(nil)
+    }
+
+    @objc private func applicationDidBecomeActive() {
+        viewModel.slotManager.checkForNewDay()
     }
 }

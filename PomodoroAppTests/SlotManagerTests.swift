@@ -47,10 +47,10 @@ final class SlotManagerTests: XCTestCase {
         XCTAssertEqual(slotManager.today.slots.last?.name, "New Task")
     }
 
-    func testAddSlot_EmptyName_UsesDefault() {
+    func testAddSlot_EmptyName_AllowsEmpty() {
         slotManager.addSlot()
         let lastSlot = slotManager.today.slots.last!
-        XCTAssertTrue(lastSlot.name.starts(with: "Slot"))
+        XCTAssertEqual(lastSlot.name, "")
     }
 
     // MARK: - Remove Slot Tests

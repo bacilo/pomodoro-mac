@@ -49,14 +49,24 @@ struct SlotRowView: View {
                         isFocused = true
                     }
             } else {
-                Text(slot.name)
-                    .foregroundColor(isCompleted ? .secondary : .primary)
-                    .strikethrough(isCompleted)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .onTapGesture(count: 2) {
-                        onStartEditing()
-                    }
+                if slot.name.isEmpty {
+                    Text("Unnamed")
+                        .foregroundColor(.secondary)
+                        .italic()
+                        .lineLimit(1)
+                        .onTapGesture(count: 2) {
+                            onStartEditing()
+                        }
+                } else {
+                    Text(slot.name)
+                        .foregroundColor(isCompleted ? .secondary : .primary)
+                        .strikethrough(isCompleted)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .onTapGesture(count: 2) {
+                            onStartEditing()
+                        }
+                }
             }
 
             Spacer()

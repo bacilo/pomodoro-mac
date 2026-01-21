@@ -250,6 +250,10 @@ class PomodoroViewModel: ObservableObject {
 
     private func playCompletionSound() {
         guard settings.playSound else { return }
-        NSSound.beep()
+        if let sound = NSSound(named: NSSound.Name(settings.completionSound.rawValue)) {
+            sound.play()
+        } else {
+            NSSound.beep()
+        }
     }
 }

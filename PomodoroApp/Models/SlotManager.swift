@@ -48,8 +48,7 @@ class SlotManager: ObservableObject {
     // MARK: - Slot Actions
 
     func addSlot(name: String = "") {
-        let slotName = name.isEmpty ? "Slot \(today.slots.count + 1)" : name
-        let slot = Slot(name: slotName)
+        let slot = Slot(name: name)
         today.slots.append(slot)
         save()
     }
