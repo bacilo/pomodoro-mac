@@ -39,6 +39,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     let marqueeMaxChars = 10  // Max visible characters for slot name
     let marqueePadding = "   "  // Padding between repeated text
 
+    // Timer suspension for popover display stability
+    private var suspendedBlinkTimer: Bool = false
+    private var suspendedMarqueeTimer: Bool = false
+
     private var isRunningTests: Bool {
         NSClassFromString("XCTestCase") != nil
     }
@@ -70,7 +74,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         popover.contentViewController = NSHostingController(rootView: MenuBarView(viewModel: viewModel))
 
         // Create the status item
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        statusItem = NSStatusBar.system.statusItem(withLength: calculateMaxStatusItemWidth())
 
         if let button = statusItem.button {
             button.action = #selector(handleClick)
@@ -174,18 +178,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
                               viewModel.timerState == .work &&
                               viewModel.currentSlotName != nil
 
-        // Set fixed width when showing slot name to prevent jitter
-        if showingSlotName {
-            // Calculate fixed width: icon + space + timer (6 chars) + " · " + slot name (marqueeMaxChars)
-            // Using monospaced font, we can calculate exact width
-            let sampleText = " 00:00 · " + String(repeating: "M", count: marqueeMaxChars)
-            let textWidth = (sampleText as NSString).size(withAttributes: [.font: monoFont]).width
-            let iconWidth: CGFloat = 20  // Approximate icon width
-            statusItem.length = iconWidth + textWidth + 8  // Add padding
-        } else {
-            statusItem.length = NSStatusItem.variableLength
-        }
-
         if title.isEmpty {
             button.image = NSImage(systemSymbolName: icon, accessibilityDescription: "Pomodoro")
             button.attributedTitle = NSAttributedString(string: "")
@@ -251,6 +243,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             button.attributedTitle = result
             button.imagePosition = .imageLeading
         }
+    }
+
+    private func calculateMaxStatusItemWidth() -> CGFloat {
+        let monoFont = NSFont.monospacedSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
+        // Maximum: icon + " 00:00 · " + 10 chars slot name
+        let maxContent = " 00:00 · " + String(repeating: "M", count: marqueeMaxChars)
+        let textWidth = (maxContent as NSString).size(withAttributes: [.font: monoFont]).width
+        let iconWidth: CGFloat = 20
+        let padding: CGFloat = 8
+        return iconWidth + textWidth + padding
     }
 
     @objc private func handleClick() {
@@ -333,5 +335,30 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
     @objc private func applicationDidBecomeActive() {
         viewModel.slotManager.checkForNewDay()
+    }
+
+    // MARK: - NSPopoverDelegate
+
+    func popoverDidShow(_ notification: Notification) {
+        // Suspend timers to prevent jitter
+        if blinkTimer != nil {
+            suspendedBlinkTimer = true
+            blinkTimer?.invalidate()
+            blinkTimer = nil
+        }
+        if marqueeTimer != nil {
+            suspendedMarqueeTimer = true
+            marqueeTimer?.invalidate()
+            marqueeTimer = nil
+        }
+    }
+
+    func popoverDidClose(_ notification: Notification) {
+        // Resume timers if they were suspended
+        if suspendedBlinkTimer || suspendedMarqueeTimer {
+            suspendedBlinkTimer = false
+            suspendedMarqueeTimer = false
+            updateStatusButton()  // Restart timers if still needed
+        }
     }
 }
