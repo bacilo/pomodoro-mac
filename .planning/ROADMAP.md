@@ -30,10 +30,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. User travels to different timezone and app updates day boundary to local time
   4. User works through DST transition (spring forward or fall back) and app correctly handles midnight timing
 
-**Plans**: TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 01-01: TBD during planning
+- [ ] 01-01-PLAN.md — Triple-redundancy day detection (NSCalendarDayChanged + wake notification + midnight timer + timezone change)
 
 ### Phase 2: Popover Positioning
 **Goal**: Popover consistently positions near menubar status item regardless of display configuration, menubar auto-hide state, or dynamic content updates.
@@ -60,5 +60,5 @@ Phases execute in numeric order: 1 → 2
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Day Detection | 0/TBD | Not started | - |
+| 1. Day Detection | 0/1 | Planned | - |
 | 2. Popover Positioning | 0/TBD | Not started | - |
