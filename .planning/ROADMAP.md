@@ -48,10 +48,10 @@ Plans:
   3. User keeps popover open while timer runs and popover doesn't jump or jitter during status item updates
   4. If positioning fails for any reason, popover dismisses cleanly rather than appearing at screen corner
 
-**Plans**: TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 02-01: TBD during planning
+- [ ] 02-01-PLAN.md — Fixed-width status item, timer suspension, coordinate caching, and graceful dismissal
 
 ## Progress
 
@@ -61,4 +61,4 @@ Phases execute in numeric order: 1 → 2
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Day Detection | 1/1 | Complete | 2026-02-12 |
-| 2. Popover Positioning | 0/TBD | Not started | - |
+| 2. Popover Positioning | 0/1 | Ready | - |
