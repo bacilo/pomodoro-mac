@@ -47,21 +47,21 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DAY-01 | TBD | Pending |
-| DAY-02 | TBD | Pending |
-| DAY-03 | TBD | Pending |
-| DAY-04 | TBD | Pending |
-| DAY-05 | TBD | Pending |
-| POP-01 | TBD | Pending |
-| POP-02 | TBD | Pending |
-| POP-03 | TBD | Pending |
-| POP-04 | TBD | Pending |
+| DAY-01 | Phase 1 | Pending |
+| DAY-02 | Phase 1 | Pending |
+| DAY-03 | Phase 1 | Pending |
+| DAY-04 | Phase 1 | Pending |
+| DAY-05 | Phase 1 | Pending |
+| POP-01 | Phase 2 | Pending |
+| POP-02 | Phase 2 | Pending |
+| POP-03 | Phase 2 | Pending |
+| POP-04 | Phase 2 | Pending |
 
 **Coverage:**
 - v1 requirements: 9 total
-- Mapped to phases: 0
-- Unmapped: 9 ⚠️
+- Mapped to phases: 9
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-12*
-*Last updated: 2026-02-12 after initial definition*
+*Last updated: 2026-02-12 after roadmap creation*
