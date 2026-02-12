@@ -9,6 +9,7 @@ struct DailySlots: Codable, Equatable {
     init(date: Date = Date(), slots: [Slot] = [], completedCount: Int = 0) {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
+        formatter.timeZone = TimeZone.current
         self.dateString = formatter.string(from: date)
         self.slots = slots
         self.completedCount = completedCount
@@ -23,6 +24,7 @@ struct DailySlots: Codable, Equatable {
     static func todayDateString() -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
+        formatter.timeZone = TimeZone.current
         return formatter.string(from: Date())
     }
 
@@ -51,6 +53,7 @@ struct DayHistory: Codable, Identifiable, Equatable {
     init(date: Date, completedSlotNames: [String]) {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
+        formatter.timeZone = TimeZone.current
         self.dateString = formatter.string(from: date)
         self.completedSlotNames = completedSlotNames
     }
