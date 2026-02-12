@@ -17,10 +17,10 @@ Requirements for this bug fix release. Each maps to roadmap phases.
 
 ### Popover Positioning
 
-- [ ] **POP-01**: Popover remains anchored when menu bar auto-hides
-- [ ] **POP-02**: Popover positions correctly on multi-monitor setups
-- [ ] **POP-03**: Popover doesn't jump or jitter during timer/marquee updates
-- [ ] **POP-04**: Graceful fallback if positioning fails (dismiss cleanly rather than jump to corner)
+- [x] **POP-01**: Popover remains anchored when menu bar auto-hides ✓
+- [x] **POP-02**: Popover positions correctly on multi-monitor setups ✓ (works on 2/3 screens, edge case accepted)
+- [x] **POP-03**: Popover doesn't jump or jitter during timer/marquee updates ✓
+- [x] **POP-04**: Graceful fallback if positioning fails (dismiss cleanly rather than jump to corner) ✓
 
 ## v2 Requirements
 
@@ -52,10 +52,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DAY-03 | Phase 1 | Complete |
 | DAY-04 | Phase 1 | Complete |
 | DAY-05 | Phase 1 | Complete |
-| POP-01 | Phase 2 | Pending |
-| POP-02 | Phase 2 | Pending |
-| POP-03 | Phase 2 | Pending |
-| POP-04 | Phase 2 | Pending |
+| POP-01 | Phase 2 | Complete |
+| POP-02 | Phase 2 | Complete (2/3 screens) |
+| POP-03 | Phase 2 | Complete |
+| POP-04 | Phase 2 | Complete |
 
 **Coverage:**
 - v1 requirements: 9 total
@@ -64,4 +64,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-02-12*
-*Last updated: 2026-02-12 after Phase 1 completion*
+*Last updated: 2026-02-12 after Phase 2 completion (milestone complete)*
