@@ -12,7 +12,7 @@ Two independent bug fixes for a functional macOS menubar Pomodoro timer: automat
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Day Detection** - App automatically detects new calendar days while running
+- [x] **Phase 1: Day Detection** - App automatically detects new calendar days while running ✓ 2026-02-12
 - [ ] **Phase 2: Popover Positioning** - Popover remains stably anchored to menubar status item
 
 ## Phase Details
@@ -33,7 +33,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans:** 1 plan
 
 Plans:
-- [ ] 01-01-PLAN.md — Triple-redundancy day detection (NSCalendarDayChanged + wake notification + midnight timer + timezone change)
+- [x] 01-01-PLAN.md — Triple-redundancy day detection (NSCalendarDayChanged + wake notification + midnight timer + timezone change) ✓
 
 ### Phase 2: Popover Positioning
 **Goal**: Popover consistently positions near menubar status item regardless of display configuration, menubar auto-hide state, or dynamic content updates.
@@ -60,5 +60,5 @@ Phases execute in numeric order: 1 → 2
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Day Detection | 0/1 | Planned | - |
+| 1. Day Detection | 1/1 | Complete | 2026-02-12 |
 | 2. Popover Positioning | 0/TBD | Not started | - |

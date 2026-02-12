@@ -9,11 +9,11 @@ Requirements for this bug fix release. Each maps to roadmap phases.
 
 ### Day Detection
 
-- [ ] **DAY-01**: App detects new calendar day while running (passive monitoring via notifications)
-- [ ] **DAY-02**: App detects day change after Mac wakes from sleep
-- [ ] **DAY-03**: Day detection triggers full reinitialization (archive yesterday, fresh state, template prompt if applicable)
-- [ ] **DAY-04**: Handle timezone changes correctly
-- [ ] **DAY-05**: Handle DST transitions correctly
+- [x] **DAY-01**: App detects new calendar day while running (passive monitoring via notifications) ✓
+- [x] **DAY-02**: App detects day change after Mac wakes from sleep ✓
+- [x] **DAY-03**: Day detection triggers full reinitialization (archive yesterday, fresh state, template prompt if applicable) ✓
+- [x] **DAY-04**: Handle timezone changes correctly ✓
+- [x] **DAY-05**: Handle DST transitions correctly ✓
 
 ### Popover Positioning
 
@@ -47,11 +47,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DAY-01 | Phase 1 | Pending |
-| DAY-02 | Phase 1 | Pending |
-| DAY-03 | Phase 1 | Pending |
-| DAY-04 | Phase 1 | Pending |
-| DAY-05 | Phase 1 | Pending |
+| DAY-01 | Phase 1 | Complete |
+| DAY-02 | Phase 1 | Complete |
+| DAY-03 | Phase 1 | Complete |
+| DAY-04 | Phase 1 | Complete |
+| DAY-05 | Phase 1 | Complete |
 | POP-01 | Phase 2 | Pending |
 | POP-02 | Phase 2 | Pending |
 | POP-03 | Phase 2 | Pending |
@@ -64,4 +64,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-02-12*
-*Last updated: 2026-02-12 after roadmap creation*
+*Last updated: 2026-02-12 after Phase 1 completion*
