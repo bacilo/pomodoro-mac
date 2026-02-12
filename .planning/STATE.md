@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** The timer must reliably track work sessions and automatically reset for each new day without manual intervention.
-**Current focus:** Milestone v1.0 Complete
+**Current focus:** Ready for new milestone
 
 ## Current Position
 
-Phase: 2 of 2 (Popover Positioning) - MILESTONE COMPLETE
-Plan: All plans complete
-Status: Milestone v1.0 finished
-Last activity: 2026-02-12 — All phases complete and verified
+Phase: None active
+Plan: None active
+Status: v1.0 archived, ready for /gsd:new-milestone
+Last activity: 2026-02-12 — Milestone v1.0 completed and archived
 
-Progress: [██████████] 100%
+Progress: Ready for next milestone
 
 ## Performance Metrics
 

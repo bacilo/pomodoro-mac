@@ -28,8 +28,12 @@ The timer must reliably track work sessions and automatically reset for each new
 
 <!-- Current scope. Building toward these. -->
 
-- [ ] App detects new calendar day while running and reinitializes (archives yesterday, shows fresh state, prompts for template if applicable)
-- [ ] Popover remains anchored to status item when menu bar auto-hides on multi-monitor setups
+None — v1.0 complete.
+
+### Completed (v1.0)
+
+- [x] App detects new calendar day while running and reinitializes (archives yesterday, shows fresh state, prompts for template if applicable)
+- [x] Popover remains anchored to status item when menu bar auto-hides on multi-monitor setups (works on 2/3 screens)
 
 ### Out of Scope
 
@@ -71,8 +75,17 @@ The timer must reliably track work sessions and automatically reset for each new
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Silent reset on new day | User prefers no modal/alert, just fresh state | — Pending |
-| Archive yesterday's data | Preserve history before reset | — Pending |
+| Silent reset on new day | User prefers no modal/alert, just fresh state | ✓ Implemented |
+| Archive yesterday's data | Preserve history before reset | ✓ Implemented |
+| Triple-redundancy day detection | Four notification mechanisms ensure reliability | ✓ Implemented |
+| Fixed-width status item | Prevents popover anchor invalidation during updates | ✓ Implemented |
+| Graceful dismissal | Popover closes cleanly rather than jumping to corner | ✓ Implemented |
+
+## Milestones
+
+| Version | Description | Status |
+|---------|-------------|--------|
+| v1.0 | Bug fixes (day detection, popover positioning) | ✓ Complete 2026-02-12 |
 
 ---
-*Last updated: 2026-02-12 after initialization*
+*Last updated: 2026-02-12 after v1.0 completion*
