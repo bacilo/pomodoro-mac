@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import AppKit
 
 class SlotManager: ObservableObject {
     @Published var today: DailySlots
@@ -13,11 +14,21 @@ class SlotManager: ObservableObject {
     private let historyKey = "pomodoroSlotsHistory_v2"  // New key for new format
     private let defaultNamesKey = "defaultSlotNames"
 
+    // Day change detection
+    private var observers: [NSObjectProtocol] = []
+    private var midnightTimer: Timer?
+
     init() {
         // Initialize with empty today, then load
         self.today = DailySlots()
         load()
         checkForNewDay()
+        setupDayChangeObservers()
+    }
+
+    deinit {
+        observers.forEach { NotificationCenter.default.removeObserver($0) }
+        midnightTimer?.invalidate()
     }
 
     // MARK: - Computed Properties
@@ -391,5 +402,65 @@ class SlotManager: ObservableObject {
             return true
         }
         return false
+    }
+
+    // MARK: - Day Change Detection
+
+    private func setupDayChangeObservers() {
+        // Observer 1: Calendar day changed notification (fires at midnight)
+        let dayChangedObserver = NotificationCenter.default.addObserver(
+            forName: .NSCalendarDayChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.checkForNewDay()
+        }
+        observers.append(dayChangedObserver)
+
+        // Observer 2: Wake from sleep notification
+        let wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.checkForNewDay()
+        }
+        observers.append(wakeObserver)
+
+        // Observer 3: Timezone change notification
+        let timezoneObserver = NotificationCenter.default.addObserver(
+            forName: NSNotification.Name.NSSystemTimeZoneDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.checkForNewDay()
+        }
+        observers.append(timezoneObserver)
+
+        // Observer 4: Scheduled midnight timer fallback
+        scheduleMidnightCheck()
+    }
+
+    private func scheduleMidnightCheck() {
+        // Calculate next midnight with DST safety
+        let now = Date()
+        let calendar = Calendar.current
+
+        // Get tomorrow's start of day (handles DST correctly)
+        guard let tomorrow = calendar.date(byAdding: .day, value: 1, to: now),
+              let nextMidnight = calendar.startOfDay(for: tomorrow) as Date? else {
+            return
+        }
+
+        // Add 5-second buffer to ensure we're past midnight
+        let fireDate = nextMidnight.addingTimeInterval(5)
+        let timeInterval = fireDate.timeIntervalSince(now)
+
+        // Schedule timer
+        midnightTimer?.invalidate()
+        midnightTimer = Timer.scheduledTimer(withTimeInterval: timeInterval, repeats: false) { [weak self] _ in
+            self?.checkForNewDay()
+            self?.scheduleMidnightCheck() // Reschedule for next midnight
+        }
     }
 }
