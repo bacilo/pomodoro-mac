@@ -43,6 +43,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private var suspendedBlinkTimer: Bool = false
     private var suspendedMarqueeTimer: Bool = false
 
+    // Popover positioning stability
+    private var cachedButtonFrame: NSRect?
+    private var displayChangeObserver: NSObjectProtocol?
+    private var menuBarVisibilityTimer: Timer?
+
     private var isRunningTests: Bool {
         NSClassFromString("XCTestCase") != nil
     }
@@ -72,6 +77,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         popover.behavior = .transient
         popover.delegate = self
         popover.contentViewController = NSHostingController(rootView: MenuBarView(viewModel: viewModel))
+
+        // Observe display configuration changes
+        displayChangeObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didChangeScreenParametersNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.handleDisplayChange()
+        }
 
         // Create the status item
         statusItem = NSStatusBar.system.statusItem(withLength: calculateMaxStatusItemWidth())
@@ -255,6 +269,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         return iconWidth + textWidth + padding
     }
 
+    private func handleDisplayChange() {
+        // Dismiss popover on display configuration change
+        if popover.isShown {
+            popover.performClose(nil)
+        }
+        cachedButtonFrame = nil
+    }
+
     @objc private func handleClick() {
         guard let event = NSApp.currentEvent else { return }
 
@@ -270,7 +292,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
         if popover.isShown {
             popover.performClose(nil)
+            cachedButtonFrame = nil
         } else {
+            // Cache button frame in screen coordinates before showing
+            if let buttonWindow = button.window {
+                let frameInScreen = buttonWindow.convertToScreen(button.frame)
+                cachedButtonFrame = frameInScreen
+            }
+
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             popover.contentViewController?.view.window?.makeKey()
         }
@@ -351,9 +380,26 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             marqueeTimer?.invalidate()
             marqueeTimer = nil
         }
+
+        // Start monitoring menu bar visibility
+        menuBarVisibilityTimer = Timer.scheduledTimer(
+            withTimeInterval: 0.2,
+            repeats: true
+        ) { [weak self] _ in
+            guard let self = self else { return }
+            // Dismiss if button frame becomes invalid (menu bar hiding)
+            if self.popover.isShown && self.statusItem.button?.window?.frame == nil {
+                self.popover.performClose(nil)
+            }
+        }
     }
 
     func popoverDidClose(_ notification: Notification) {
+        // Stop monitoring menu bar visibility
+        menuBarVisibilityTimer?.invalidate()
+        menuBarVisibilityTimer = nil
+        cachedButtonFrame = nil
+
         // Resume timers if they were suspended
         if suspendedBlinkTimer || suspendedMarqueeTimer {
             suspendedBlinkTimer = false
