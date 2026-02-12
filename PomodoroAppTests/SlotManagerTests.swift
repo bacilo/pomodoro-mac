@@ -420,4 +420,21 @@ final class SlotManagerTests: XCTestCase {
 
         XCTAssertEqual(slotManager.today.completedCount, 3)
     }
+
+    // MARK: - Timezone Tests
+
+    func testTodayDateString_UsesCurrentTimezone() {
+        // Verify the string format is valid and matches expected pattern
+        let dateString = DailySlots.todayDateString()
+        let pattern = "^\\d{4}-\\d{2}-\\d{2}$"
+        XCTAssertTrue(dateString.range(of: pattern, options: .regularExpression) != nil,
+                     "Date string should be in yyyy-MM-dd format")
+
+        // Verify it represents today
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.timeZone = TimeZone.current
+        let expected = formatter.string(from: Date())
+        XCTAssertEqual(dateString, expected)
+    }
 }
