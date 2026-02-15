@@ -26,7 +26,9 @@ The timer must reliably track work sessions and automatically reset for each new
 
 ### Active
 
-None yet — awaiting next milestone.
+- [ ] GitHub Actions builds and publishes releases on version tag push
+- [ ] App version tracks release versions properly
+- [ ] First release published to GitHub Releases
 
 ### Out of Scope
 
@@ -68,6 +70,16 @@ None yet — awaiting next milestone.
 | Version | Description | Status |
 |---------|-------------|--------|
 | v1.0 | Bug fixes (day detection, popover positioning) | ✓ Shipped 2026-02-15 |
+| v1.1 | Distribution (GitHub Actions + Releases) | ◆ Active |
+
+## Current Milestone: v1.1 Distribution
+
+**Goal:** Set up automated release distribution via GitHub Actions so tagged versions produce downloadable releases.
+
+**Target features:**
+- GitHub Actions workflow triggered by version tags
+- Automated build, zip, and release creation
+- Proper version numbering in Xcode project
 
 ---
-*Last updated: 2026-02-15 after v1.0 milestone archive*
+*Last updated: 2026-02-15 after v1.1 milestone start*
