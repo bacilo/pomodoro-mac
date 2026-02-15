@@ -52,10 +52,10 @@ Plans:
   3. Built .app is packaged into downloadable .zip file
   4. GitHub Release is created with .zip and SHA256 checksum as downloadable assets
   5. Release version matches git tag version
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] TBD during phase planning
+- [ ] 03-01-PLAN.md — GitHub Actions release workflow (build, package, release)
 
 ### Phase 4: Cross-Architecture Compatibility
 **Goal**: Releases work on both Intel and Apple Silicon Macs
@@ -92,6 +92,6 @@ Phases execute in numeric order: 3 → 4 → 5
 |-------|-----------|----------------|--------|-----------|
 | 1. Day Detection | v1.0 | 1/1 | Complete | 2026-02-12 |
 | 2. Popover Positioning | v1.0 | 1/1 | Complete | 2026-02-12 |
-| 3. GitHub Actions Release Pipeline | v1.1 | 0/0 | Not started | - |
+| 3. GitHub Actions Release Pipeline | v1.1 | 0/1 | In progress | - |
 | 4. Cross-Architecture Compatibility | v1.1 | 0/0 | Not started | - |
 | 5. Distribution Documentation | v1.1 | 0/0 | Not started | - |
