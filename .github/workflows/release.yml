@@ -1,0 +1,129 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-release:
+    runs-on: macos-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Extract version from tag
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Building version $VERSION"
+
+      - name: Run tests
+        run: |
+          xcodebuild test \
+            -project PomodoroApp.xcodeproj \
+            -scheme PomodoroApp \
+            -destination 'platform=macOS'
+
+      - name: Build app (Release configuration)
+        run: |
+          xcodebuild build \
+            -project PomodoroApp.xcodeproj \
+            -scheme PomodoroApp \
+            -configuration Release \
+            -derivedDataPath build/ \
+            -destination 'platform=macOS' \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            MARKETING_VERSION=${{ env.VERSION }} \
+            CURRENT_PROJECT_VERSION=${{ github.run_number }}
+
+      - name: Ad-hoc code sign for Apple Silicon
+        run: |
+          codesign --force --deep --sign - \
+            build/Build/Products/Release/PomodoroApp.app
+
+      - name: Verify build
+        run: |
+          APP_PATH="build/Build/Products/Release/PomodoroApp.app"
+
+          # Check app exists
+          if [ ! -d "$APP_PATH" ]; then
+            echo "❌ Build failed: PomodoroApp.app not found"
+            exit 1
+          fi
+
+          # Check version matches tag
+          BUILT_VERSION=$(/usr/libexec/PlistBuddy \
+            -c 'Print :CFBundleShortVersionString' \
+            "$APP_PATH/Contents/Info.plist")
+
+          echo "Expected version: ${{ env.VERSION }}"
+          echo "Built version: $BUILT_VERSION"
+
+          if [ "$BUILT_VERSION" != "${{ env.VERSION }}" ]; then
+            echo "❌ Version mismatch: expected ${{ env.VERSION }}, got $BUILT_VERSION"
+            exit 1
+          fi
+
+          echo "✅ Build verification passed"
+
+      - name: Create distribution zip
+        run: |
+          ditto -c -k --keepParent --sequesterRsrc \
+            build/Build/Products/Release/PomodoroApp.app \
+            PomodoroApp-v${{ env.VERSION }}.zip
+
+      - name: Generate SHA256 checksum
+        run: |
+          shasum -a 256 PomodoroApp-v${{ env.VERSION }}.zip > checksums.txt
+          cat checksums.txt
+
+      - name: Create GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: |
+            PomodoroApp-v*.zip
+            checksums.txt
+          body: |
+            ## PomodoroApp v${{ env.VERSION }}
+
+            ### Installation
+
+            1. **Download**: Click `PomodoroApp-v${{ env.VERSION }}.zip` below
+            2. **Extract**: Double-click the .zip file
+            3. **Move**: Drag `PomodoroApp.app` to `/Applications`
+            4. **First Launch**: Right-click → Open (required for unsigned apps)
+
+            **macOS 15.1+ Sequoia Users:**
+
+            If the app shows "damaged" error or right-click → Open doesn't work:
+
+            1. Open Terminal and run:
+               ```bash
+               xattr -r -d com.apple.quarantine /Applications/PomodoroApp.app
+               ```
+            2. Go to System Settings → Privacy & Security
+            3. Scroll down and click "Open Anyway" button next to PomodoroApp
+
+            ### Verify Download (Optional)
+
+            To verify the download integrity:
+
+            ```bash
+            shasum -a 256 -c checksums.txt
+            ```
+
+            Expected output: `PomodoroApp-v${{ env.VERSION }}.zip: OK`
+
+            ---
+
+            **Note:** This is an unsigned macOS app. On first launch, you must use right-click → Open to bypass Gatekeeper. This is normal for apps distributed outside the Mac App Store.
+          draft: false
+          prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'alpha') }}
+          generateReleaseNotes: true
