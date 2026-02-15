@@ -1,187 +1,254 @@
-# Technology Stack: Day Change Detection
+# Technology Stack - GitHub Actions Release Distribution
 
-**Project:** PomodoroApp Bug Fix - Passive Day Detection
-**Researched:** 2026-02-12
-**Target:** macOS 13.0+
-
-## Current State Analysis
-
-**Existing implementation:** `SlotManager.checkForNewDay()` (line 387-394)
-- Triggers: App launch (init), `NSApplication.didBecomeActiveNotification`
-- Gap: No passive detection while app runs in menubar
-- Result: Day won't roll over at midnight unless user interacts with app
+**Project:** PomodoroApp (macOS menubar timer)
+**Researched:** 2026-02-15
+**Scope:** CI/CD for automated release builds and distribution (unsigned)
 
 ## Recommended Stack
 
-### Primary Approach: Notification-Based Detection
+### GitHub Actions Runner
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| macos-latest | → macos-15 | CI/CD runner environment | Current stable standard; macos-14 deprecated by July 2026; macos-15 is the default for macos-latest since August 2025 |
 
-| Technology | Purpose | Why | Confidence |
-|------------|---------|-----|------------|
-| `Notification.Name.NSCalendarDayChanged` | Midnight boundary detection | System posts at calendar day rollover, handles timezone changes automatically | MEDIUM |
-| `NotificationCenter.default` | Observer registration | Standard Foundation pattern already used in app (line 58-63 of PomodoroApp.swift) | HIGH |
-| `NSWorkspace.didWakeNotification` | Sleep recovery | Detect day changes that occurred while Mac was asleep | HIGH |
+**Rationale:** Use `macos-latest` in workflows for automatic updates to current stable macOS. As of February 2026, this resolves to macOS 15 (Sequoia). Avoid `macos-14` (deprecated), consider `macos-26` (beta, may have stability/queueing issues).
 
-**Implementation pattern:**
-```swift
-// In SlotManager.init() or AppDelegate.applicationDidFinishLaunching
-NotificationCenter.default.addObserver(
-    self,
-    selector: #selector(handleDayChanged),
-    name: .NSCalendarDayChanged,
-    object: nil
-)
+### Core GitHub Actions
+| Action | Version | Purpose | Why |
+|--------|---------|---------|-----|
+| actions/checkout | v6 | Repository checkout | Latest major version; handles git operations efficiently |
+| softprops/action-gh-release | v2.5.0 | Create/update releases | Industry standard; handles draft uploads, asset management, changelog; simpler than gh CLI for basic releases |
 
-NotificationCenter.default.addObserver(
-    self,
-    selector: #selector(handleSystemWake),
-    name: NSWorkspace.didWakeNotification,
-    object: nil
-)
+**Rationale for softprops over gh CLI:** While gh CLI offers more control, softprops/action-gh-release provides better ergonomics for standard release workflows - automatic draft creation, batch asset uploads, and built-in changelog support. Use gh CLI only if you need advanced release manipulation.
+
+### Build Tools (macOS Native)
+| Tool | Version | Purpose | Why |
+|------|---------|---------|-----|
+| xcodebuild | System | Build and archive | Native Apple tool; already validated in your workflow |
+| ditto | System | Create distribution .zip | macOS native; preserves symlinks, resource forks, metadata; produces smaller archives than standard zip |
+| create-dmg (optional) | Latest from npm | Create .dmg installers | Optional; improves UX but .zip is sufficient for menubar apps |
+
+**Rationale:** Leverage native macOS tools (no external dependencies). `ditto -c -k --sequesterRsrc --keepParent` creates proper macOS app bundles that match Finder's "Compress" behavior.
+
+### Version Management
+| Approach | Implementation | Purpose | Why |
+|----------|---------------|---------|-----|
+| Git tags | v*.*.* pattern | Version source | Simple; no extra actions needed; trigger workflow with tag push |
+| GitHub ref extraction | `${GITHUB_REF#refs/tags/}` | Extract version from tag | Built-in bash; no third-party actions; works for simple v-prefixed tags |
+
+**Rationale:** Avoid version extraction actions (jannemattila/get-version-from-tag, etc.) unless you need complex semver parsing. Simple bash string manipulation is sufficient for straightforward tags like `v1.2.3`.
+
+## Build Configuration
+
+### xcodebuild Flags for Unsigned Release Builds
+
+**Archive command:**
+```bash
+xcodebuild archive \
+  -project PomodoroApp.xcodeproj \
+  -scheme PomodoroApp \
+  -configuration Release \
+  -archivePath build/PomodoroApp.xcarchive \
+  CODE_SIGN_IDENTITY="" \
+  CODE_SIGNING_REQUIRED=NO \
+  CODE_SIGNING_ALLOWED=NO
 ```
 
-**Rationale:**
-- `.NSCalendarDayChanged` is designed specifically for this use case
-- System handles timezone changes, DST transitions automatically
-- No polling overhead - event-driven only
-- Works in background (menubar apps remain active)
+**Export command (not needed for unsigned):**
+Skip `xcodebuild -exportArchive` - it requires code signing. Instead, directly use the built .app from the archive.
 
-### Fallback Approach: Timer-Based Detection
-
-| Technology | Purpose | Why | Confidence |
-|------------|---------|-----|------------|
-| `Timer.scheduledTimer(withTimeInterval:repeats:)` | Manual midnight scheduling | Fallback if notifications unreliable | HIGH |
-| `Calendar.current.startOfDay(for:)` | Next midnight calculation | Precise calendar-aware date math | HIGH |
-| `Calendar.current.dateComponents(_:from:to:)` | Day comparison | Reliable day boundary checking | HIGH |
-
-**Implementation pattern:**
-```swift
-private func scheduleNextMidnightCheck() {
-    let calendar = Calendar.current
-    let now = Date()
-
-    // Calculate next midnight
-    guard let tomorrow = calendar.date(byAdding: .day, value: 1, to: now),
-          let nextMidnight = calendar.date(from: calendar.dateComponents([.year, .month, .day], from: tomorrow)) else {
-        return
-    }
-
-    let timeUntilMidnight = nextMidnight.timeIntervalSince(now)
-
-    Timer.scheduledTimer(withTimeInterval: timeUntilMidnight, repeats: false) { [weak self] _ in
-        self?.checkForNewDay()
-        self?.scheduleNextMidnightCheck() // Reschedule for next day
-    }
-}
+**Extract .app from archive:**
+```bash
+cp -R build/PomodoroApp.xcarchive/Products/Applications/PomodoroApp.app build/
 ```
 
-**When to use:**
-- If `.NSCalendarDayChanged` doesn't fire reliably in testing
-- As supplementary check (belt-and-suspenders approach)
-- Consider scheduling timer 5 seconds after midnight to avoid edge cases
+### Release Configuration vs Debug
 
-### Supporting APIs
+| Aspect | Debug | Release |
+|--------|-------|---------|
+| Optimization | None | Fastest/smallest |
+| Debug symbols | Full | Stripped |
+| Size | Larger | Smaller |
+| Performance | Slower | Faster |
 
-| API | Purpose | When to Use | Confidence |
-|-----|---------|-------------|------------|
-| `Calendar.current.isDateInToday(_:)` | Validate if date is today | Quick check before initializing new day | HIGH |
-| `Calendar.current.compare(_:to:toGranularity:)` | Compare dates at day level | Ignore time components when checking if day changed | HIGH |
-| `DateFormatter` with "yyyy-MM-dd" | String-based day tracking | Already used in `DailyStats` (line 10-14 of Statistics.swift) | HIGH |
+**Use `-configuration Release`** for all CI builds to match App Store optimization levels.
+
+### Creating Distribution Archives
+
+**Recommended: ditto (native macOS)**
+```bash
+ditto -c -k --sequesterRsrc --keepParent \
+  build/PomodoroApp.app \
+  build/PomodoroApp.zip
+```
+
+**Flags explained:**
+- `-c -k`: Create PKZip archive
+- `--sequesterRsrc`: Preserve macOS resource forks
+- `--keepParent`: Maintain parent directory structure
+
+**Why not standard zip?** Standard `zip -r` may miss resource forks, symlinks, and produces larger files. `ditto` matches Finder's compression behavior.
+
+**Optional: DMG creation**
+```bash
+npx create-dmg build/PomodoroApp.app build/ --no-code-sign
+```
+
+DMG provides better UX (drag-to-Applications UI) but adds complexity. Use only if user feedback requests it.
+
+## GitHub Actions Permissions
+
+### Required Permissions
+
+```yaml
+permissions:
+  contents: write  # Required to create releases and upload assets
+```
+
+**Why `contents: write`?** Creating releases requires write access to repository contents. The default `GITHUB_TOKEN` has this permission when explicitly declared.
+
+**Caveat:** This permission grants broader access (commits, PR merges). For security-conscious repos, use a dedicated release workflow with restricted scope.
+
+## Workflow Trigger Configuration
+
+### Recommended Trigger Pattern
+
+```yaml
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Matches v1.0.0, v2.3.1, etc.
+```
+
+**Why this pattern?**
+- Semantic versioning convention
+- Prevents accidental triggers on non-version tags
+- Clear intent (v prefix = release)
+
+**Extract version in workflow:**
+```yaml
+- name: Extract version
+  run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+```
+
+No third-party actions needed for simple version extraction.
+
+## Alternatives Considered
+
+| Category | Recommended | Alternative | Why Not |
+|----------|-------------|-------------|---------|
+| Release Action | softprops/action-gh-release | gh CLI | More verbose; requires manual release creation + upload; gh CLI better for complex workflows |
+| Release Action | softprops/action-gh-release | actions/create-release | Deprecated; not maintained |
+| Archiving | ditto | zip -r | Doesn't preserve macOS metadata; larger files |
+| DMG Creation | None (defer) | create-dmg | Adds complexity; .zip sufficient for menubar apps; consider later if users request |
+| Version Extraction | Bash string manipulation | jannemattila/get-version-from-tag | Over-engineered for simple v*.*.* tags; extra dependency |
+| Runner | macos-latest | macos-14 | Deprecated by July 2026 |
+| Runner | macos-latest | macos-26 (beta) | Beta status; potential instability and queueing issues |
+| Build Tool | Fastlane | N/A | Overkill for unsigned builds; adds dependency; xcodebuild sufficient |
+| Signing | None (unsigned) | Certificates/notarization | Not needed per requirements; users accept Gatekeeper warnings |
+
+## Installation & Setup
+
+### No Installation Required
+
+All tools are native to GitHub Actions `macos-latest` runner:
+- xcodebuild (Xcode CLI tools)
+- ditto (macOS system tool)
+- gh CLI (pre-installed on GitHub runners)
+
+### Workflow Dependencies
+
+Add to workflow file only:
+```yaml
+- uses: actions/checkout@v6
+- uses: softprops/action-gh-release@v2
+  with:
+    files: build/*.zip
+```
+
+### Optional: DMG Support (if needed later)
+
+```yaml
+- name: Install create-dmg
+  run: npm install --global create-dmg
+```
+
+Only add if user feedback requests .dmg format.
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: Polling with Short Intervals
-**What:** `Timer` firing every minute/second to check date
-**Why bad:**
-- Wastes CPU cycles (1440+ checks per day vs 1 event)
-- Prevents app nap / energy efficiency
-- Race conditions around midnight
-**Instead:** Use notification-based or single timer scheduled for midnight
+### ❌ DON'T: Use xcodebuild -exportArchive for unsigned apps
 
-### Anti-Pattern 2: Comparing Date() Directly
-**What:**
-```swift
-if Date() > lastCheckDate {
-    // Assume new day
-}
-```
-**Why bad:**
-- Doesn't account for timezone changes
-- Breaks with DST transitions
-- Not calendar-aware (some cultures have different day boundaries)
-**Instead:** Use `Calendar.current.compare(_:to:toGranularity: .day)`
+Modern xcodebuild requires `-exportOptionsPlist` with `teamID` for export. This complicates unsigned workflows.
 
-### Anti-Pattern 3: Ignoring Sleep/Wake Cycle
-**What:** Only checking on user interaction
-**Why bad:**
-- Mac sleeps overnight, app doesn't process midnight notification
-- User opens app next morning, still showing yesterday's data
-**Instead:** Always check on `NSWorkspace.didWakeNotification`
+**Instead:** Extract .app directly from `.xcarchive/Products/Applications/`
 
-### Anti-Pattern 4: Hardcoded Timezone Assumptions
-**What:**
-```swift
-// BAD: Assumes UTC or specific timezone
-let midnight = Calendar.current.date(bySettingHour: 0, minute: 0, second: 0, of: date)
-```
-**Why bad:**
-- User timezone != app timezone assumption
-- Breaks when traveling or changing system timezone
-**Instead:** `Calendar.current` respects system timezone automatically
+### ❌ DON'T: Use deprecated actions
 
-## Implementation Recommendation
+- `actions/create-release` (deprecated)
+- `actions/upload-release-asset` (deprecated)
 
-**Recommended hybrid approach:**
+**Instead:** Use `softprops/action-gh-release@v2` which handles both.
 
-1. **Primary:** Register `.NSCalendarDayChanged` notification observer
-2. **Backup:** Register `NSWorkspace.didWakeNotification` observer (always check on wake)
-3. **Fallback:** Schedule midnight timer as safety net
-4. **Validation:** All handlers call same `checkForNewDay()` method with guard against duplicate processing
+### ❌ DON'T: Skip CODE_SIGNING_* flags
 
-**Code location:** Modify `SlotManager.init()` to add observers, similar to pattern in `AppDelegate.applicationDidFinishLaunching` (line 46-108 of PomodoroApp.swift)
+Without explicit `CODE_SIGN_IDENTITY=""` and `CODE_SIGNING_REQUIRED=NO`, xcodebuild may fail if signing identity is configured in Xcode project.
 
-**Why hybrid:**
-- `.NSCalendarDayChanged` may not fire if Mac asleep at midnight
-- Wake notification catches sleep-induced gaps
-- Timer provides absolute guarantee even if notifications fail
-- Single `checkForNewDay()` prevents duplicate processing (line 387-394 already has date comparison guard)
+### ❌ DON'T: Use `macos-14` runner
 
-## Testing Considerations
+Deprecated by July 2026. Use `macos-latest` or `macos-15`.
 
-| Test Scenario | How to Simulate |
-|---------------|-----------------|
-| Normal midnight rollover | `date -s "23:59:50"` (requires sudo, or wait for real midnight) |
-| Timezone change | System Preferences → Date & Time → Change timezone |
-| Sleep/wake across midnight | Put Mac to sleep before midnight, wake after |
-| DST transition | Wait for actual DST date, or manipulate system clock |
+### ❌ DON'T: Forget `permissions: contents: write`
 
-**macOS 13+ compatibility:** All APIs mentioned available since macOS 10.9+, safe for target deployment.
+Default GITHUB_TOKEN doesn't have release creation permissions unless explicitly declared.
+
+### ❌ DON'T: Use standard `zip -r` for macOS apps
+
+Loses metadata, resource forks, and produces larger files than ditto.
 
 ## Confidence Assessment
 
-| Recommendation | Confidence | Rationale |
-|----------------|------------|-----------|
-| `.NSCalendarDayChanged` notification | MEDIUM | Training data indicates this exists, but official docs unavailable to verify exact name and reliability in menubar apps. Needs testing. |
-| `NSWorkspace.didWakeNotification` | HIGH | Well-documented, widely used pattern for sleep/wake handling |
-| Timer-based midnight scheduling | HIGH | Calendar math APIs well-documented and reliable |
-| Hybrid approach (all three) | HIGH | Defense in depth - one method will work even if others fail |
-
-## Open Questions / Validation Needed
-
-1. **CRITICAL:** Verify exact notification name - training data suggests `.NSCalendarDayChanged` but couldn't access official docs. Test in real app to confirm it fires.
-2. Does `.NSCalendarDayChanged` fire for menubar-only apps (LSUIElement = true)?
-3. Does notification fire if Mac asleep at midnight? (Likely NO - hence need for wake notification)
-4. Performance impact of three-method approach - probably negligible but worth measuring
+| Area | Confidence | Source |
+|------|------------|--------|
+| GitHub Actions runners | HIGH | Official GitHub Actions runner-images repository, deprecation announcements |
+| softprops/action-gh-release | HIGH | Official releases page, widely adopted (verified from marketplace usage) |
+| xcodebuild unsigned flags | MEDIUM | Apple Developer Forums confirm approach; no official docs for "skip signing" workflow |
+| ditto command | HIGH | Apple Developer Documentation, Fastlane source code confirms usage |
+| Permissions | HIGH | Official GitHub Docs, community discussions |
+| actions/checkout@v6 | HIGH | Official actions/checkout repository |
 
 ## Sources
 
-- Current codebase analysis: `/Users/pedf/workspace/pomodoro-mac/PomodoroApp/Models/SlotManager.swift`
-- Current codebase analysis: `/Users/pedf/workspace/pomodoro-mac/PomodoroApp/PomodoroApp.swift`
-- API knowledge: Foundation framework (Calendar, NotificationCenter, Timer patterns)
-- **Note:** Official Apple documentation unavailable during research session. Recommendations based on training data knowledge of Foundation APIs (January 2025 cutoff). All notification names and API details flagged for verification.
+**GitHub Actions Runners:**
+- [GitHub Actions macOS runner versions issue #13008](https://github.com/actions/runner-images/issues/13008) - macOS 26 beta announcement
+- [macOS-latest label issue #12520](https://github.com/actions/runner-images/issues/12520) - macos-15 default timeline
+- [GitHub-hosted runners reference](https://docs.github.com/en/actions/reference/runners/github-hosted-runners)
 
-## Next Steps
+**Release Actions:**
+- [softprops/action-gh-release repository](https://github.com/softprops/action-gh-release)
+- [softprops/action-gh-release v2.2.1 release](https://github.com/softprops/action-gh-release/releases/tag/v2.2.1)
 
-1. **Test notification name:** Create minimal test to verify `.NSCalendarDayChanged` fires at midnight
-2. **Prototype hybrid approach:** Implement all three detection methods in SlotManager
-3. **Validate edge cases:** Test timezone changes, DST transitions, sleep/wake cycles
-4. **Measure reliability:** Run overnight tests to confirm day rollover detection works
+**Build Tools:**
+- [xcodebuild export archive unsigned - Apple Developer Forums](https://developer.apple.com/forums/thread/75636)
+- [Packaging Mac software for distribution - Apple Developer Documentation](https://developer.apple.com/documentation/xcode/packaging-mac-software-for-distribution)
+- [Fastlane issue #11095 - ditto for efficient packaging](https://github.com/fastlane/fastlane/issues/11095)
+
+**Permissions:**
+- [GitHub Actions GITHUB_TOKEN permissions discussion #121022](https://github.com/orgs/community/discussions/121022)
+- [Controlling permissions for GITHUB_TOKEN](https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/controlling-permissions-for-github_token)
+
+**Workflow Triggers:**
+- [GitHub Actions tag trigger patterns - Dev Cheatsheets](https://michaelcurrin.github.io/dev-cheatsheets/cheatsheets/ci-cd/github-actions/triggers.html)
+
+**DMG Creation:**
+- [create-dmg by Sindre Sorhus](https://github.com/sindresorhus/create-dmg)
+- [Distributing Mac Apps With GitHub Actions](https://defn.io/2023/09/22/distributing-mac-apps-with-github-actions/)
+
+**actions/checkout:**
+- [actions/checkout repository](https://github.com/actions/checkout)
+
+**xcodebuild configurations:**
+- [Debug vs Release builds - Medium](https://medium.com/geekculture/what-are-debug-and-release-modes-in-xcode-how-to-check-app-is-running-in-debug-mode-8dadad6a3428)
+
+**gh CLI:**
+- [gh release create command](https://cli.github.com/manual/gh_release_create)
