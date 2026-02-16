@@ -41,9 +41,11 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             MARKETING_VERSION=${{ env.VERSION }} \
-            CURRENT_PROJECT_VERSION=${{ github.run_number }}
+            CURRENT_PROJECT_VERSION=${{ github.run_number }} \
+            ARCHS="x86_64 arm64" \
+            ONLY_ACTIVE_ARCH=NO
 
-      - name: Ad-hoc code sign for Apple Silicon
+      - name: Ad-hoc code sign
         run: |
           codesign --force --deep --sign - \
             build/Build/Products/Release/PomodoroApp.app
@@ -71,7 +73,31 @@ jobs:
             exit 1
           fi
 
-          echo "✅ Build verification passed"
+          # Check universal binary (Intel + Apple Silicon)
+          ARCHS=$(lipo -info "$APP_PATH/Contents/MacOS/PomodoroApp" 2>&1)
+          echo "Architectures: $ARCHS"
+
+          if ! echo "$ARCHS" | grep -q "x86_64"; then
+            echo "Missing x86_64 (Intel) architecture"
+            exit 1
+          fi
+
+          if ! echo "$ARCHS" | grep -q "arm64"; then
+            echo "Missing arm64 (Apple Silicon) architecture"
+            exit 1
+          fi
+
+          echo "Universal binary verified (x86_64 + arm64)"
+
+          # Verify ad-hoc code signature
+          if ! codesign --verify --deep --strict "$APP_PATH" 2>&1; then
+            echo "Code signature verification failed"
+            exit 1
+          fi
+
+          echo "Code signature verified"
+
+          echo "✅ Build verification passed: version, architecture, and signing OK"
 
       - name: Create distribution zip
         run: |
