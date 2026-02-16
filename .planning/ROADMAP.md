@@ -78,10 +78,10 @@ Plans:
   1. README includes clear download and installation instructions
   2. README documents Gatekeeper bypass steps (xattr -cr command)
   3. First release (v1.1.0) is published and downloadable from GitHub Releases
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] TBD during phase planning
+- [ ] 05-01-PLAN.md — README installation docs, xattr consistency, and first v1.1.0 release
 
 ## Progress
 
