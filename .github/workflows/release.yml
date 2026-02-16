@@ -132,7 +132,7 @@ jobs:
 
             1. Open Terminal and run:
                ```bash
-               xattr -r -d com.apple.quarantine /Applications/PomodoroApp.app
+               xattr -cr /Applications/PomodoroApp.app
                ```
             2. Go to System Settings → Privacy & Security
             3. Scroll down and click "Open Anyway" button next to PomodoroApp
