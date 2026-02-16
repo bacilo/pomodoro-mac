@@ -65,10 +65,10 @@ Plans:
   1. Built .app is ad-hoc code signed for Apple Silicon compatibility
   2. .app binary is universal (supports Intel and ARM64 architectures)
   3. CI verifies .app structure and version before packaging
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] TBD during phase planning
+- [ ] 04-01-PLAN.md — Universal binary build with architecture and signing verification
 
 ### Phase 5: Distribution Documentation
 **Goal**: Users can successfully download and run the app despite macOS Gatekeeper
@@ -93,5 +93,5 @@ Phases execute in numeric order: 3 → 4 → 5
 | 1. Day Detection | v1.0 | 1/1 | Complete | 2026-02-12 |
 | 2. Popover Positioning | v1.0 | 1/1 | Complete | 2026-02-12 |
 | 3. GitHub Actions Release Pipeline | v1.1 | 0/1 | In progress | - |
-| 4. Cross-Architecture Compatibility | v1.1 | 0/0 | Not started | - |
+| 4. Cross-Architecture Compatibility | v1.1 | 0/1 | Not started | - |
 | 5. Distribution Documentation | v1.1 | 0/0 | Not started | - |
