@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** The timer must reliably track work sessions and automatically reset for each new day without manual intervention.
-**Current focus:** Phase 4 - Cross-Architecture Compatibility
+**Current focus:** Phase 5 - Distribution Documentation
 
 ## Current Position
 
-Phase: 4 of 5 (Cross-Architecture Compatibility)
+Phase: 5 of 5 (Distribution Documentation)
 Plan: 1 of 1 in current phase (phase complete)
-Status: Phase 4 complete - ready for next phase
-Last activity: 2026-02-16 — Completed 04-01: Universal binary build with architecture and signing verification
+Status: Phase 5 complete - all phases complete
+Last activity: 2026-02-16 — Completed 05-01: Installation documentation and v1.1.0 release
 
-Progress: [████████░░] 80% (4/5 phases complete)
+Progress: [██████████] 100% (5/5 phases complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
+- Total plans completed: 5
 - Average duration: 3 min
-- Total execution time: 0.28 hours
+- Total execution time: 0.38 hours
 
 **By Phase:**
 
@@ -31,10 +31,11 @@ Progress: [████████░░] 80% (4/5 phases complete)
 | 2. Popover Positioning | 1 | 5 min | 5 min |
 | 3. GitHub Actions Release Pipeline | 1 | 2 min | 2 min |
 | 4. Cross-Architecture Compatibility | 1 | 2 min | 2 min |
+| 5. Distribution Documentation | 1 | 6 min | 6 min |
 
 **Recent Trend:**
-- v1.1 execution in progress: 2 plans completed (Phase 3-4)
-- Trend: Consistent (2 min average for v1.1 distribution phases)
+- v1.1 execution complete: 3 plans completed (Phase 3-5)
+- Trend: Consistent (3 min average for v1.1 distribution phases)
 
 *Updated after each plan completion*
 
@@ -53,6 +54,7 @@ Recent decisions affecting current work:
 - Phase 3: Include comprehensive macOS 15.1+ Sequoia installation instructions in release notes
 - Phase 4: Universal binary as default (ARCHS="x86_64 arm64", ONLY_ACTIVE_ARCH=NO) supports both Intel and Apple Silicon
 - Phase 4: CI quality gates for architecture and signing verification prevent broken releases
+- [Phase 05-01]: Use xattr -cr for consistency across README and release notes
 
 ### Pending Todos
 
@@ -76,6 +78,6 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed Phase 4 (Cross-Architecture Compatibility) - 04-01-PLAN.md executed
+Stopped at: Completed 05-01-PLAN.md - Phase 5 (Distribution Documentation) complete
 Resume file: None
-Next step: Proceed to Phase 5 as defined in ROADMAP.md
+Next step: All phases complete - v1.1 Distribution milestone achieved
